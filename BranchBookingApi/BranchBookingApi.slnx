@@ -1,3 +1,11 @@
 <Solution>
+  <Folder Name="/Database Scripts/">
+    <File Path="V1_Create_Branch_Tables.sql" />
+    <File Path="V2_Branch_Functions.sql" />
+  </Folder>
   <Project Path="BranchBooking.Api/BranchBooking.Api.csproj" />
+  <Project Path="BranchBooking.Application/BranchBooking.Application.csproj" />
+  <Project Path="BranchBooking.Core/BranchBooking.Core.csproj" />
+  <Project Path="BranchBooking.Infrastructure/BranchBooking.Infrastructure.csproj" />
+  <Project Path="BranchBooking.Tests/BranchBooking.Tests.csproj" />
 </Solution>

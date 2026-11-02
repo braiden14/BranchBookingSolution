@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\BranchBooking.Core\BranchBooking.Core.csproj" />
+  </ItemGroup>
+
 </Project>
