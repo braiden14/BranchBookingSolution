@@ -48,7 +48,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("StaffOrAdmin", policy => policy.RequireRole("Admin", "Staff"));
+});
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

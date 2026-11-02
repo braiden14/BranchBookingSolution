@@ -20,6 +20,15 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         return await QueryUserAsync(connection, "WHERE u.id = @UserId", new { UserId = userId }, cancellationToken);
     }
 
+    public async Task<long?> GetStaffBranchIdAsync(long userId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<long?>(new CommandDefinition(
+            "SELECT branch_id FROM public.staff_profiles WHERE user_id = @UserId",
+            new { UserId = userId },
+            cancellationToken: cancellationToken));
+    }
+
     public async Task<long> CreateCustomerAsync(RegisterCustomerRequest request, string normalizedEmail, string passwordHash, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
@@ -71,7 +80,7 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
 
         await connection.ExecuteAsync(new CommandDefinition(
             """
-            INSERT INTO public.staff_profiles (user_id) VALUES (@UserId);
+            INSERT INTO public.staff_profiles (user_id, branch_id) VALUES (@UserId, @BranchId);
             INSERT INTO public.user_roles (user_id, role_id, assigned_by_user_id)
             SELECT @UserId, id, @AssignedByUserId FROM public.roles WHERE code = @RoleCode;
             INSERT INTO public.staff_invitations (user_id, token_hash, role_id, invited_by_user_id, expires_at_utc)
@@ -82,6 +91,7 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
             new
             {
                 UserId = userId,
+                request.BranchId,
                 AssignedByUserId = assignedByUserId,
                 RoleCode = request.RoleCode,
                 TokenHash = tokenHash,

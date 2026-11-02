@@ -58,7 +58,7 @@ public static class AuthenticationEndpoints
             if (!long.TryParse(subject, out var assignedByUserId)) return Results.Unauthorized();
             var invitationToken = await authenticationService.InviteStaffAsync(assignedByUserId, request, cancellationToken);
             return Results.Ok(new { invitationToken });
-        }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+        }).RequireAuthorization("AdminOnly");
 
         group.MapPost("/staff/invitations/accept", async (AcceptStaffInvitationRequest request, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
         {

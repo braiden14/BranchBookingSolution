@@ -57,6 +57,13 @@ namespace BranchBooking.Application.Services
                 totalPages);
         }
 
+        public async Task<BranchDto?> GetByIdAsync(long branchId, CancellationToken cancellationToken = default)
+        {
+            ValidateBranchId(branchId);
+            var branch = await branchRepository.GetByIdAsync(branchId, cancellationToken);
+            return branch is null ? null : MapToDto(branch);
+        }
+
         public async Task UpdateAsync(
             long branchId,
             UpdateBranchRequest request,

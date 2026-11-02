@@ -8,6 +8,8 @@ public interface IAuthenticationRepository
 
     Task<AuthUserRecord?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default);
 
+    Task<long?> GetStaffBranchIdAsync(long userId, CancellationToken cancellationToken = default);
+
     Task<long> CreateCustomerAsync(
         RegisterCustomerRequest request,
         string normalizedEmail,

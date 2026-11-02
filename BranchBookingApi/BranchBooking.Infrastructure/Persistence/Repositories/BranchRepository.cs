@@ -105,6 +105,30 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
                 row.total_count)).ToArray();
         }
 
+        public async Task<BranchListItemRecord?> GetByIdAsync(long branchId, CancellationToken cancellationToken = default)
+        {
+            await using var connection = connectionFactory.CreateConnection();
+            var row = await connection.QuerySingleOrDefaultAsync<BranchListItemDbRow>(new CommandDefinition(
+                "SELECT id, code, name, address_line_1, city, province, postal_code, status, accepts_bookings, created_at_utc, 1::BIGINT AS total_count FROM public.branches WHERE id = @BranchId",
+                new { BranchId = branchId },
+                cancellationToken: cancellationToken));
+
+            return row is null
+                ? null
+                : new BranchListItemRecord(
+                    row.id,
+                    row.code,
+                    row.name,
+                    row.address_line_1,
+                    row.city,
+                    row.province,
+                    row.postal_code,
+                    row.status,
+                    row.accepts_bookings,
+                    new DateTimeOffset(DateTime.SpecifyKind(row.created_at_utc, DateTimeKind.Utc)),
+                    row.total_count);
+        }
+
         private sealed record BranchListItemDbRow(
             long id,
             string code,

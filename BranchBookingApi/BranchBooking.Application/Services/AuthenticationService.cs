@@ -123,9 +123,9 @@ public sealed class AuthenticationService(
 
     public async Task<string> InviteStaffAsync(long assignedByUserId, InviteStaffRequest request, CancellationToken cancellationToken = default)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName) || string.IsNullOrWhiteSpace(request.RoleCode))
+        if (request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName) || string.IsNullOrWhiteSpace(request.RoleCode) || request.BranchId <= 0)
         {
-            throw new DomainValidationException("All staff invitation details are required.");
+            throw new DomainValidationException("All staff invitation details and a valid branch are required.");
         }
 
         var email = NormalizeEmail(request.Email);

@@ -16,7 +16,8 @@ public sealed record InviteStaffRequest(
     string FirstName,
     string LastName,
     string? PhoneNumber,
-    string RoleCode);
+    string RoleCode,
+    long BranchId);
 
 public sealed record AcceptStaffInvitationRequest(
     string Token,
