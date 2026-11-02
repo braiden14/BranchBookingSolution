@@ -1,6 +1,7 @@
 ﻿using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Interfaces.Services;
+using BranchBooking.Application.Models.Branch;
 using BranchBooking.Application.Models.Request;
 using BranchBooking.Application.Models.Schedule;
 using BranchBooking.Core.Entities;
@@ -34,6 +35,50 @@ namespace BranchBooking.Application.Services
                 BranchStatus.Inactive, false);
 
             return await branchRepository.AddAsync(branch, cancellationToken);
+        }
+
+        public async Task<PagedBranchDto> GetPageAsync(
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            pageNumber = Math.Max(pageNumber, 1);
+            pageSize = Math.Clamp(pageSize, 1, 200);
+
+            var records = (await branchRepository.GetPageAsync(pageNumber, pageSize, cancellationToken)).ToArray();
+            var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+            var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            return new PagedBranchDto(
+                records.Select(MapToDto).ToArray(),
+                pageNumber,
+                pageSize,
+                totalCount,
+                totalPages);
+        }
+
+        public async Task UpdateAsync(
+            long branchId,
+            UpdateBranchRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ValidateBranchId(branchId);
+            ValidateUpdateRequest(request);
+
+            if (!await branchRepository.UpdateAsync(branchId, request, cancellationToken))
+            {
+                throw new DomainValidationException("The branch could not be found.");
+            }
+        }
+
+        public async Task DeactivateAsync(long branchId, CancellationToken cancellationToken = default)
+        {
+            ValidateBranchId(branchId);
+
+            if (!await branchRepository.DeactivateAsync(branchId, cancellationToken))
+            {
+                throw new DomainValidationException("The branch could not be found.");
+            }
         }
 
         public async Task ActivateAsync(long branchId, CancellationToken cancellationToken = default)
@@ -108,6 +153,57 @@ namespace BranchBooking.Application.Services
                 branch.Status,
                 branch.AcceptsBookings,
                 branch.CreatedAtUtc);
+        }
+
+        private static BranchDto MapToDto(BranchListItemRecord branch)
+        {
+            return new BranchDto(
+                branch.Id,
+                branch.Code,
+                branch.Name,
+                branch.AddressLine1,
+                branch.City,
+                branch.Province,
+                branch.PostalCode,
+                (BranchStatus)branch.Status,
+                branch.AcceptsBookings,
+                branch.CreatedAtUtc);
+        }
+
+        private static void ValidateUpdateRequest(UpdateBranchRequest? request)
+        {
+            if (request is null)
+            {
+                throw new DomainValidationException("Branch update request is required.");
+            }
+
+            ValidateText(request.Code, "Code", 50);
+            ValidateText(request.Name, "Name", 200);
+            ValidateText(request.AddressLine1, "AddressLine1", 200);
+            ValidateText(request.City, "City", 100);
+            ValidateText(request.Province, "Province", 100);
+            ValidateText(request.PostalCode, "PostalCode", 20);
+        }
+
+        private static void ValidateText(string? value, string fieldName, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new DomainValidationException($"{fieldName} is required.");
+            }
+
+            if (value.Length > maxLength)
+            {
+                throw new DomainValidationException($"{fieldName} cannot exceed {maxLength} characters.");
+            }
+        }
+
+        private static void ValidateBranchId(long branchId)
+        {
+            if (branchId <= 0)
+            {
+                throw new DomainValidationException("Branch ID must be greater than zero.");
+            }
         }
     }
 }

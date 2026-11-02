@@ -59,3 +59,30 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 .configuration-tab:disabled { color: #aebdcb; cursor: not-allowed; }
 .configuration-tab__lock { font-size: 9px; font-weight: 500; }
 @media (max-width: 600px) { .configuration-tabs { display: grid; grid-template-columns: 1fr; }.configuration-tab { justify-content: flex-start; } }
+
+.branch-table-card { overflow: hidden; }
+.branch-table-wrapper { overflow-x: auto; }
+.branch-table { width: 100%; border-collapse: collapse; color: #52657e; font-size: 12px; }
+.branch-table th { padding: 13px 15px; color: #8b9bb0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: .5px; }
+.branch-table td { padding: 16px 15px; border-bottom: 1px solid #edf1f6; vertical-align: middle; white-space: nowrap; }
+.branch-table tbody tr:hover { background: #fbfdff; }
+.branch-table td:nth-child(2) { white-space: normal; }
+.branch-table td:nth-child(2) small { display: block; margin-top: 4px; color: #96a4b4; font-size: 10px; }
+.branch-table__name { display: flex; align-items: center; gap: 10px; }
+.branch-table__name > div { display: grid; gap: 4px; }
+.branch-table__name strong { color: #294664; font-size: 12px; }
+.branch-table__name span:not(.branch-table__initials) { color: #8b9bb0; font-size: 10px; }
+.branch-table__initials { display: grid; place-items: center; width: 34px; height: 34px; color: var(--blue); background: var(--sky); border-radius: 8px; font-size: 10px; font-weight: 800; }
+.booking-state { display: inline-flex; align-items: center; gap: 6px; color: #9aa8b8; font-size: 10px; }
+.booking-state > span { width: 7px; height: 7px; background: #c6d0dc; border-radius: 50%; }
+.booking-state--active { color: #07875b; }
+.booking-state--active > span { background: #07875b; }
+.table-actions { display: flex; justify-content: flex-end; gap: 5px; }
+.icon-button--danger { color: #b55739; }
+.icon-button:disabled { cursor: not-allowed; opacity: .4; }
+.table-pagination { display: flex; align-items: center; justify-content: space-between; padding: 16px 15px 0; color: #8b9bb0; font-size: 11px; }
+.table-pagination > div { display: flex; gap: 5px; }
+.table-loading { display: grid; gap: 8px; }
+.table-loading .skeleton-card { height: 55px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 760px) { .branch-table th:nth-child(2), .branch-table td:nth-child(2) { display: none; }.branch-table th, .branch-table td { padding-left: 8px; padding-right: 8px; }.branch-table th:first-child, .branch-table td:first-child { padding-left: 0; }.branch-table th:last-child, .branch-table td:last-child { padding-right: 0; } }

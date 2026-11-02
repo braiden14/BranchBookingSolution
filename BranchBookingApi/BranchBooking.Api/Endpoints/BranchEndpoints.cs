@@ -13,7 +13,7 @@ namespace BranchBooking.Api.Endpoints
             group.MapGet("/", async (IBranchService branchService, CancellationToken cancellationToken,
                 [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20) =>
             {
-                var branches = await branchService.GetAllAsync(pageNumber, pageSize, cancellationToken);
+                var branches = await branchService.GetPageAsync(pageNumber, pageSize, cancellationToken);
                 return Results.Ok(branches);
             });
 
@@ -29,6 +29,25 @@ namespace BranchBooking.Api.Endpoints
                 CancellationToken cancellationToken) =>
             {
                 await branchService.ActivateAsync(branchId, cancellationToken);
+                return Results.NoContent();
+            });
+
+            group.MapPut("/{branchId:long}", async (
+                long branchId,
+                UpdateBranchRequest request,
+                IBranchService branchService,
+                CancellationToken cancellationToken) =>
+            {
+                await branchService.UpdateAsync(branchId, request, cancellationToken);
+                return Results.NoContent();
+            });
+
+            group.MapPost("/{branchId:long}/deactivate", async (
+                long branchId,
+                IBranchService branchService,
+                CancellationToken cancellationToken) =>
+            {
+                await branchService.DeactivateAsync(branchId, cancellationToken);
                 return Results.NoContent();
             });
 

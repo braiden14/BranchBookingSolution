@@ -4,6 +4,7 @@ import { LoginPage } from '../features/auth/components/LoginPage'
 import { AuthProvider } from '../features/auth/providers/AuthProvider'
 import { BranchesPage } from '../features/branches/components/BranchesPage'
 import { BranchConfigurationWorkspace } from '../features/branches/components/BranchConfigurationWorkspace'
+import { OverviewPage } from '../features/overview/components/OverviewPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
 function ComingSoon({ title }: { title: string }) {
@@ -15,7 +16,7 @@ export default function App() {
     <Route path="/login" element={<LoginPage />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
-        <Route index element={<Navigate to="/branches" replace />} />
+        <Route index element={<OverviewPage />} />
         <Route path="branches" element={<BranchesPage />} />
         <Route path="branches/:branchId/configuration" element={<BranchConfigurationWorkspace />} />
         <Route path="appointments" element={<ComingSoon title="Appointments" />} />

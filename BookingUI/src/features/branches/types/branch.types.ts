@@ -21,3 +21,13 @@ export interface CreateBranchRequest {
   province: string
   postalCode: string
 }
+
+export type UpdateBranchRequest = CreateBranchRequest
+
+export interface PagedBranches {
+  items: Branch[]
+  pageNumber: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+}
