@@ -1,26 +1,29 @@
-import { ArrowLeft, CalendarDays, Check, Clock3, Save } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarDays, Check, Clock3, Save } from 'lucide-react'
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { LoadingOverlay } from '../../../components/ui/LoadingOverlay'
 import { useToast } from '../../../components/ui/ToastProvider'
 import { useBranchConfiguration } from '../hooks/useBranchConfiguration'
 import { useOperationalSchedule } from '../hooks/useOperationalSchedule'
-import { activateBranch } from '../services/branches.service'
+import { activateBranch, updateBranch } from '../services/branches.service'
 import { BranchServicesConfiguration } from './BranchServicesConfiguration'
 import { CapacityOverridesConfiguration } from './CapacityOverridesConfiguration'
 import { DateOverridesConfiguration } from './DateOverridesConfiguration'
 import type { CreateOperationalScheduleRequest, WeeklyOperatingHours } from '../types/operational-schedule.types'
+import type { Branch, UpdateBranchRequest } from '../types/branch.types'
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const today = new Date().toISOString().slice(0, 10)
 const defaultHours = (): WeeklyOperatingHours[] => days.map((_, index) => ({ dayOfWeek: index + 1, opensAt: index > 4 ? '09:00' : '08:00', closesAt: index > 4 ? '13:00' : '17:00', isClosed: index === 6, capacity: index === 6 ? 0 : 10 }))
 
-type ConfigurationTab = 'services' | 'schedule' | 'overrides'
+type ConfigurationTab = 'details' | 'services' | 'schedule' | 'overrides'
 
 export function BranchConfigurationWorkspace() {
   const { branchId: branchIdParam } = useParams()
   const branchId = Number(branchIdParam)
+  const location = useLocation()
   const navigate = useNavigate()
+  const branch = (location.state as { branch?: Branch } | null)?.branch
   const { schedule, isLoading: isScheduleLoading, error: scheduleError, save: saveSchedule } = useOperationalSchedule(branchId)
   const configuration = useBranchConfiguration(branchId)
   const { showToast } = useToast()
@@ -29,7 +32,17 @@ export function BranchConfigurationWorkspace() {
   const [weeklyHours, setWeeklyHours] = useState(defaultHours)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<ConfigurationTab>('services')
+  const [activeTab, setActiveTab] = useState<ConfigurationTab>(branch ? 'details' : 'services')
+  const [branchForm, setBranchForm] = useState<UpdateBranchRequest>(branch ? {
+    code: branch.code,
+    name: branch.name,
+    addressLine1: branch.addressLine1,
+    city: branch.city,
+    province: branch.province,
+    postalCode: branch.postalCode,
+  } : { code: '', name: '', addressLine1: '', city: '', province: '', postalCode: '' })
+  const [isBranchSaving, setIsBranchSaving] = useState(false)
+  const [branchSaveError, setBranchSaveError] = useState<string | null>(null)
   const [isActivating, setIsActivating] = useState(false)
   const [isActivated, setIsActivated] = useState(false)
   const [activationError, setActivationError] = useState<string | null>(null)
@@ -44,6 +57,24 @@ export function BranchConfigurationWorkspace() {
   const updateDay = (index: number, field: keyof WeeklyOperatingHours, value: string | boolean | number | null) => setWeeklyHours((current) => current.map((hours, currentIndex) => currentIndex === index ? { ...hours, [field]: value } : hours))
   const toggleClosed = (index: number, isClosed: boolean) => setWeeklyHours((current) => current.map((hours, currentIndex) => currentIndex === index ? { ...hours, isClosed, opensAt: isClosed ? null : hours.opensAt ?? '08:00', closesAt: isClosed ? null : hours.closesAt ?? '17:00', capacity: isClosed ? 0 : hours.capacity || 10 } : hours))
   const updateTime = (index: number, field: 'opensAt' | 'closesAt') => (event: ChangeEvent<HTMLInputElement>) => updateDay(index, field, event.target.value)
+
+  const updateBranchField = (field: keyof UpdateBranchRequest) => (event: ChangeEvent<HTMLInputElement>) => setBranchForm((current) => ({ ...current, [field]: event.target.value }))
+
+  const submitBranchDetails = async (event: FormEvent) => {
+    event.preventDefault()
+    setIsBranchSaving(true)
+    setBranchSaveError(null)
+    try {
+      await updateBranch(branchId, branchForm)
+      showToast('Branch details saved successfully.')
+    } catch {
+      const message = 'We could not save the branch details. Please try again.'
+      setBranchSaveError(message)
+      showToast(message, 'error')
+    } finally {
+      setIsBranchSaving(false)
+    }
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -88,10 +119,16 @@ export function BranchConfigurationWorkspace() {
     {activationError && <p className="form-error activation-error">{activationError}</p>}
 
     <div className="configuration-tabs" role="tablist" aria-label="Branch configuration sections">
+      <button type="button" role="tab" aria-selected={activeTab === 'details'} className={`configuration-tab ${activeTab === 'details' ? 'configuration-tab--active' : ''}`} disabled={!branch} onClick={() => setActiveTab('details')}>Branch details</button>
       <button type="button" role="tab" aria-selected={activeTab === 'services'} className={`configuration-tab ${activeTab === 'services' ? 'configuration-tab--active' : ''}`} onClick={() => setActiveTab('services')}>Services</button>
       <button type="button" role="tab" aria-selected={activeTab === 'schedule'} className={`configuration-tab ${activeTab === 'schedule' ? 'configuration-tab--active' : ''}`} onClick={() => setActiveTab('schedule')}>Operating schedule</button>
       <button type="button" role="tab" aria-selected={activeTab === 'overrides'} className={`configuration-tab ${activeTab === 'overrides' ? 'configuration-tab--active' : ''}`} disabled={!schedule} onClick={() => setActiveTab('overrides')}>Overrides {!schedule && <span className="configuration-tab__lock">Save schedule first</span>}</button>
     </div>
+
+    {activeTab === 'details' && branch && <form onSubmit={submitBranchDetails}>
+      <section className="section-card configuration-card"><div className="configuration-card__title"><span className="configuration-icon"><Building2 size={20} /></span><div><h2>Branch details</h2><p>Update the information customers and staff use to identify this branch.</p></div></div><div className="form-grid"><label>Branch code<input required value={branchForm.code} onChange={updateBranchField('code')} /></label><label>Branch name<input required value={branchForm.name} onChange={updateBranchField('name')} /></label><label className="form-grid__wide">Address<input required value={branchForm.addressLine1} onChange={updateBranchField('addressLine1')} /></label><label>City<input required value={branchForm.city} onChange={updateBranchField('city')} /></label><label>Province<input required value={branchForm.province} onChange={updateBranchField('province')} /></label><label>Postal code<input required value={branchForm.postalCode} onChange={updateBranchField('postalCode')} /></label></div></section>
+      {branchSaveError && <p className="form-error">{branchSaveError}</p>}<div className="configuration-actions"><button type="button" className="button button--secondary" onClick={() => navigate('/branches')} disabled={isBranchSaving}>Back to branches</button><button type="submit" className="button button--primary" disabled={isBranchSaving}>{isBranchSaving ? <LoadingOverlay label="Saving…" /> : <><Save size={16} />Save branch details<Check size={15} /></>}</button></div>
+    </form>}
 
     {activeTab === 'services' && <>
       <BranchServicesConfiguration
