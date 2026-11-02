@@ -9,6 +9,7 @@ namespace BranchBooking.Api.Configuration
         {
             services.AddSingleton<IBranchService, BranchService>();
             services.AddSingleton<IOperationalScheduleService, OperationalScheduleService>();
+            services.AddSingleton<IBranchConfigurationService, BranchConfigurationService>();
 
             return services;
         }
