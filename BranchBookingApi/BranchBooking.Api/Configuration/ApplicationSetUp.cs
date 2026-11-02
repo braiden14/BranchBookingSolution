@@ -8,6 +8,7 @@ namespace BranchBooking.Api.Configuration
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddSingleton<IBranchService, BranchService>();
+            services.AddSingleton<IOperationalScheduleService, OperationalScheduleService>();
 
             return services;
         }

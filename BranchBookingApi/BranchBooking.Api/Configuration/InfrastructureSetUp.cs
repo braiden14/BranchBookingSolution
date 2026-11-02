@@ -18,6 +18,7 @@ namespace BranchBooking.Api.Configuration
 
             services.AddSingleton(new DbConnectionFactory(connectionString));
             services.AddSingleton<IBranchRepository, BranchRepository>();
+            services.AddSingleton<IOperationalScheduleRepository, OperationalScheduleRepository>();
 
             return services;
         }

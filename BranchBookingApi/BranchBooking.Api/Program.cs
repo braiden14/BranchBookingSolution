@@ -47,6 +47,7 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.MapBranchEndpoints();
+app.MapOperationalScheduleEndpoints();
 
 
 app.Run();

@@ -17,6 +17,9 @@ export async function getBranches(): Promise<Branch[]> {
   }
 }
 
-export async function createBranch(request: CreateBranchRequest): Promise<Branch> {
-  return apiClient<Branch>('/api/branches', { method: 'POST', body: JSON.stringify(request) })
+export async function createBranch(request: CreateBranchRequest): Promise<number> {
+  const response = await apiClient<number>('/api/branches', { method: 'POST', body: JSON.stringify(request) })
+  console.log('createBranch response:', response)
+
+  return response;
 }

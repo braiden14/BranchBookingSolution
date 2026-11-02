@@ -22,18 +22,15 @@ export function useBranches() {
   useEffect(() => { void refresh() }, [refresh])
 
   const addBranch = useCallback(async (request: CreateBranchRequest) => {
-    try {
-      const branch = await createBranch(request)
-      setBranches((current) => [...current, branch])
-    } catch {
-      setBranches((current) => [...current, {
-        ...request,
-        branchId: Date.now(),
-        status: 'Inactive',
-        acceptsBookings: false,
-        createdAtUtc: new Date().toISOString(),
-      }])
-    }
+    const branchId = await createBranch(request)
+    setBranches((current) => [...current, {
+      ...request,
+      branchId,
+      status: 'Inactive',
+      acceptsBookings: false,
+      createdAtUtc: new Date().toISOString(),
+    }])
+    return branchId
   }, [])
 
   return { branches, isLoading, error, refresh, addBranch }
