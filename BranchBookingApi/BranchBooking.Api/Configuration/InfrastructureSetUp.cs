@@ -1,4 +1,7 @@
 ﻿using BranchBooking.Application.Interfaces.Repositories;
+using BranchBooking.Application.Interfaces.Services;
+using BranchBooking.Application.Models.Authentication;
+using BranchBooking.Infrastructure.Authentication;
 using BranchBooking.Infrastructure.Persistence;
 using BranchBooking.Infrastructure.Persistence.Repositories;
 
@@ -20,6 +23,17 @@ namespace BranchBooking.Api.Configuration
             services.AddSingleton<IBranchRepository, BranchRepository>();
             services.AddSingleton<IOperationalScheduleRepository, OperationalScheduleRepository>();
             services.AddSingleton<IBranchConfigurationRepository, BranchConfigurationRepository>();
+            services.AddSingleton<IAuthenticationRepository, AuthenticationRepository>();
+            services.AddSingleton<IPasswordService, PasswordService>();
+
+            var jwtOptions = configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
+            if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || jwtOptions.SigningKey.Length < 32)
+            {
+                throw new InvalidOperationException("Jwt:SigningKey must be configured with at least 32 characters.");
+            }
+
+            services.AddSingleton(jwtOptions);
+            services.AddSingleton<ITokenService, JwtTokenService>();
 
             return services;
         }

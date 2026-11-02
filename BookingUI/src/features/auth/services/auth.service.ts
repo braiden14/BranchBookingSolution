@@ -1,6 +1,23 @@
+import { apiClient, setAccessToken } from '../../../lib/api-client'
+import type { AuthenticationResponse, AuthUserResponse } from '../types/auth.types'
+
 export const authService = {
-  login: async (_email: string, _password: string) => {
-    throw new Error('Authentication API is not connected yet.')
+  async login(email: string, password: string): Promise<AuthUserResponse> {
+    const authentication = await apiClient<AuthenticationResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+    setAccessToken(authentication.accessToken)
+    return authentication.user
   },
-  logout: async () => undefined,
+  async currentUser(): Promise<AuthUserResponse> {
+    return apiClient<AuthUserResponse>('/api/auth/me')
+  },
+  async logout(): Promise<void> {
+    try {
+      await apiClient<void>('/api/auth/logout', { method: 'POST' })
+    } finally {
+      setAccessToken(null)
+    }
+  },
 }

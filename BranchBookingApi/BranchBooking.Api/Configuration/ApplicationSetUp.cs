@@ -10,6 +10,8 @@ namespace BranchBooking.Api.Configuration
             services.AddSingleton<IBranchService, BranchService>();
             services.AddSingleton<IOperationalScheduleService, OperationalScheduleService>();
             services.AddSingleton<IBranchConfigurationService, BranchConfigurationService>();
+            services.AddSingleton<IAuthenticationService, AuthenticationService>();
+            services.AddSingleton(TimeProvider.System);
 
             return services;
         }

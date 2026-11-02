@@ -13,6 +13,8 @@ namespace BranchBooking.Api.Middleware
 
             var (statusCode, title, detail, type) = exception switch
             {
+                AuthenticationException => (StatusCodes.Status401Unauthorized, "Authentication failed.",
+                    exception.Message, "https://httpstatuses.com/401"),
                 DomainValidationException => (StatusCodes.Status400BadRequest, "Validation failed.",
                     exception.Message, "https://httpstatuses.com/400"),
                 DomainException => (StatusCodes.Status422UnprocessableEntity, "The request could not be processed.",

@@ -1,10 +1,27 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+let accessToken: string | null = null
+
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
 
 export async function apiClient<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers)
+  headers.set('Content-Type', 'application/json')
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    credentials: 'include',
+    headers,
   })
+  if (response.status === 401 && path !== '/api/auth/login' && path !== '/api/auth/refresh') {
+    const refreshed = await fetch(`${API_BASE_URL}/api/auth/refresh`, { method: 'POST', credentials: 'include' })
+    if (refreshed.ok) {
+      const authentication = await refreshed.json() as { accessToken: string }
+      setAccessToken(authentication.accessToken)
+      return apiClient<T>(path, options)
+    }
+  }
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`
     try {

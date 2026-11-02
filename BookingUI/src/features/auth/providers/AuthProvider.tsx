@@ -1,31 +1,45 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { authService } from '../services/auth.service'
 import type { AuthUser, UserRole } from '../types/auth.types'
 
 interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
+  isLoading: boolean
   hasRole: (roles: UserRole[]) => boolean
+  signIn: (email: string, password: string) => Promise<void>
   signOut: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>({
-    id: 'demo-admin',
-    name: 'Thabo Mokoena',
-    email: 'thabo@branchbook.co.za',
-    role: 'admin',
-  })
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    void authService.currentUser().then((response) => {
+      setUser(toAuthUser(response))
+    }).catch(() => {
+      setUser(null)
+    }).finally(() => setIsLoading(false))
+  }, [])
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
     isAuthenticated: user !== null,
-    hasRole: (roles) => user !== null && roles.includes(user.role),
-    signOut: () => setUser(null),
-  }), [user])
+    isLoading,
+    hasRole: (roles) => user !== null && roles.some((role) => user.roles.includes(role)),
+    signIn: async (email, password) => setUser(toAuthUser(await authService.login(email, password))),
+    signOut: () => { void authService.logout().finally(() => setUser(null)) },
+  }), [isLoading, user])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+function toAuthUser(response: { id: number; email: string; firstName: string; lastName: string; roles: string[] }): AuthUser {
+  const roles = response.roles.map((role) => role.toLowerCase().replace('administrator', 'admin').replace('branchmanager', 'branch-manager')) as UserRole[]
+  return { id: response.id.toString(), name: `${response.firstName} ${response.lastName}`, email: response.email, role: roles[0] ?? 'staff', roles }
 }
 
 export function useAuth() {

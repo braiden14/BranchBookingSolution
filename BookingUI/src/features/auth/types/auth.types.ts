@@ -5,4 +5,20 @@ export interface AuthUser {
   name: string
   email: string
   role: UserRole
+  roles: UserRole[]
+}
+
+export interface AuthUserResponse {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  phoneNumber: string | null
+  roles: string[]
+}
+
+export interface AuthenticationResponse {
+  user: AuthUserResponse
+  accessToken: string
+  accessTokenExpiresAtUtc: string
 }
