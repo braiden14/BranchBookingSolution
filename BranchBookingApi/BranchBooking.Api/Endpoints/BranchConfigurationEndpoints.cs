@@ -1,5 +1,5 @@
 using BranchBooking.Application.Interfaces.Services;
-using BranchBooking.Application.Models.Configuration;
+using BranchBooking.Application.Models.Request;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BranchBooking.Api.Endpoints;

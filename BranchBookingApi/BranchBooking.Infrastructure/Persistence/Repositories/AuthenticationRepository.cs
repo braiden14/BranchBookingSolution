@@ -181,15 +181,15 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
             LEFT JOIN public.roles r ON r.id = ur.role_id
             """;
         var sql = $"{select} {predicate} GROUP BY u.id";
-        var row = await connection.QuerySingleOrDefaultAsync<AuthUserDbRow>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
+        var row = await connection.QuerySingleOrDefaultAsync<AuthUser>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
         return row is null
             ? null
             : new AuthUserRecord(row.id, row.email, row.password_hash, row.first_name, row.last_name, row.phone_number,
                 (UserStatus)row.status, row.email_confirmed, row.failed_login_count, row.locked_until_utc,
-                row.authorization_version, row.roles);
+                row.authorization_version, row.roles.Cast<string>().ToArray());
     }
 
-    private sealed record AuthUserDbRow(
+    private sealed record AuthUser(
         long id,
         string email,
         string password_hash,
@@ -199,7 +199,7 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         short status,
         bool email_confirmed,
         int failed_login_count,
-        DateTimeOffset? locked_until_utc,
+        DateTime? locked_until_utc,
         int authorization_version,
-        string[] roles);
+        Array roles);
 }

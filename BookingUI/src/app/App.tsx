@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
 import { LoginPage } from '../features/auth/components/LoginPage'
+import { RegisterPage } from '../features/auth/components/RegisterPage'
 import { AuthProvider } from '../features/auth/providers/AuthProvider'
 import { BranchesPage } from '../features/branches/components/BranchesPage'
 import { BranchConfigurationWorkspace } from '../features/branches/components/BranchConfigurationWorkspace'
@@ -14,6 +15,7 @@ function ComingSoon({ title }: { title: string }) {
 export default function App() {
   return <AuthProvider><BrowserRouter><Routes>
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
         <Route index element={<OverviewPage />} />

@@ -1,4 +1,4 @@
-namespace BranchBooking.Application.Models.Configuration;
+namespace BranchBooking.Application.Models.Request;
 
 public sealed record UpsertBranchServiceRequest(
     long ServiceId,

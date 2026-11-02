@@ -1,6 +1,6 @@
 import { ArrowRight, LockKeyhole } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../providers/AuthProvider'
 
 export function LoginPage() {
@@ -11,6 +11,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const message = (location.state as { message?: string } | null)?.message
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -38,9 +39,11 @@ export function LoginPage() {
           <label>Email address<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.co.za" /></label>
           <label>Password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" /></label>
           {error && <p className="form-error">{error}</p>}
+          {message && <p className="form-success">{message}</p>}
           <button className="button button--primary button--full" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : <>Sign in <ArrowRight size={17} /></>}</button>
         </form>
         <p className="secure-note"><LockKeyhole size={15} /> Secure access for your team</p>
+        <p className="auth-switch">New to BranchBook? <Link to="/register">Create a customer account</Link></p>
       </section>
     </main>
   )
