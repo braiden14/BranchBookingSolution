@@ -1,4 +1,5 @@
 ﻿using BranchBooking.Application.Interfaces.Repositories;
+using BranchBooking.Application.Models.Branch;
 using BranchBooking.Application.Models.Request;
 using BranchBooking.Application.Services;
 using BranchBooking.Core.Entities;
@@ -64,6 +65,66 @@ namespace BranchBooking.Tests.ServiceTests
                 Assert.That(result[0].CreatedAtUtc, Is.EqualTo(branch.CreatedAtUtc));
             });
             await _branchRepository.Received(1).GetAllAsync(pageNumber, pageSize, cancellationToken);
+        }
+
+        [Test]
+        public async Task GetPageAsync_MapsListRecordsAndClampsPagingValues()
+        {
+            // Given
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = cancellationTokenSource.Token;
+            var createdAt = new DateTimeOffset(2025, 1, 2, 3, 4, 5, TimeSpan.Zero);
+            _branchRepository
+                .GetPageAsync(1, 200, cancellationToken)
+                .Returns(new[]
+                {
+                    new BranchListItemRecord(7, "JHB01", "Johannesburg", "1 Main Street", "Johannesburg", "Gauteng", "2000", 1, true, createdAt, 201)
+                });
+
+            // When
+            var result = await _branchService.GetPageAsync(0, 999, cancellationToken);
+
+            // Then
+            Assert.That(result.PageNumber, Is.EqualTo(1));
+            Assert.That(result.PageSize, Is.EqualTo(200));
+            Assert.That(result.TotalCount, Is.EqualTo(201));
+            Assert.That(result.TotalPages, Is.EqualTo(2));
+            Assert.That(result.Items, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Items[0].BranchId, Is.EqualTo(7));
+                Assert.That(result.Items[0].Status, Is.EqualTo(BranchStatus.Active));
+                Assert.That(result.Items[0].CreatedAtUtc, Is.EqualTo(createdAt));
+            });
+            await _branchRepository.Received(1).GetPageAsync(1, 200, cancellationToken);
+        }
+
+        [Test]
+        public async Task UpdateAsync_WhenRequestIsValid_ForwardsRequestToRepository()
+        {
+            // Given
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = cancellationTokenSource.Token;
+            var request = new UpdateBranchRequest("JHB02", "Rosebank", "10 Main Road", "Johannesburg", "Gauteng", "2196");
+            _branchRepository.UpdateAsync(7, request, cancellationToken).Returns(true);
+
+            // When
+            await _branchService.UpdateAsync(7, request, cancellationToken);
+
+            // Then
+            await _branchRepository.Received(1).UpdateAsync(7, request, cancellationToken);
+        }
+
+        [Test]
+        public void UpdateAsync_WhenBranchIdIsInvalid_ThrowsBeforeCallingRepository()
+        {
+            var request = new UpdateBranchRequest("JHB02", "Rosebank", "10 Main Road", "Johannesburg", "Gauteng", "2196");
+
+            var exception = Assert.ThrowsAsync<DomainValidationException>(
+                async () => await _branchService.UpdateAsync(0, request));
+
+            Assert.That(exception!.Message, Is.EqualTo("Branch ID must be greater than zero."));
+            _branchRepository.DidNotReceive().UpdateAsync(Arg.Any<long>(), Arg.Any<UpdateBranchRequest>(), Arg.Any<CancellationToken>());
         }
 
         [Test]
