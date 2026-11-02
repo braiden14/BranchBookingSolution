@@ -9,6 +9,7 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
     {
         private const string GetAllFunction = "SELECT * FROM public.get_all_branches(@PageNumber, @PageSize)";
         private const string CreateFunction = "SELECT * FROM public.create_branch(@Code, @Name, @AddressLine1, @City, @Province, @PostalCode, @Status, @AcceptsBookings)";
+        private const string ActivateFunction = "SELECT public.activate_branch(@BranchId)";
 
         public async Task<long> AddAsync(Branch branch, CancellationToken cancellationToken = default)
         {
@@ -50,6 +51,18 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
                     cancellationToken: cancellationToken));
 
             return branches.AsList();
+        }
+
+        public async Task<bool> ActivateAsync(long branchId, CancellationToken cancellationToken = default)
+        {
+            await using var connection = connectionFactory.CreateConnection();
+
+            return await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    ActivateFunction,
+                    new { BranchId = branchId },
+                    commandType: CommandType.Text,
+                    cancellationToken: cancellationToken));
         }
     }
 }

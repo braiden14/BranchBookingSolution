@@ -23,3 +23,7 @@ export async function createBranch(request: CreateBranchRequest): Promise<number
 
   return response;
 }
+
+export async function activateBranch(branchId: number): Promise<void> {
+  await apiClient<void>(`/api/branches/${branchId}/activate`, { method: 'POST' })
+}

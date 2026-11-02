@@ -23,6 +23,15 @@ namespace BranchBooking.Api.Endpoints
                 return Results.Created($"/api/branches/{branchId}", branchId);
             });
 
+            group.MapPost("/{branchId:long}/activate", async (
+                long branchId,
+                IBranchService branchService,
+                CancellationToken cancellationToken) =>
+            {
+                await branchService.ActivateAsync(branchId, cancellationToken);
+                return Results.NoContent();
+            });
+
             return endpoints;
         }
     }

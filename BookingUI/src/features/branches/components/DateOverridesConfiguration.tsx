@@ -60,7 +60,7 @@ export function DateOverridesConfiguration({ scheduleId, overrides, isDisabled, 
     <form className="override-form" onSubmit={submit}>
       <label>Date<input required type="date" value={overrideDate} disabled={isDisabled || !scheduleId} onChange={(event) => setOverrideDate(event.target.value)} /></label>
       <label>Reason <span className="optional">Optional</span><input value={reason} disabled={isDisabled || !scheduleId} onChange={(event) => setReason(event.target.value)} placeholder="Public holiday" /></label>
-      <label className="closed-toggle override-form__closed"><input type="checkbox" checked={isClosed} disabled={isDisabled || !scheduleId} onChange={(event) => setIsClosed(event.target.checked)} /><span />Closed all day</label>
+      <label className="closed-toggle override-form__closed"><input type="checkbox" checked={isClosed} disabled={isDisabled || !scheduleId} onChange={(event) => setIsClosed(event.target.checked)} /><span />Closed</label>
       {!isClosed && <><label>Opens<input required type="time" value={opensAt} disabled={isDisabled || !scheduleId} onChange={(event) => setOpensAt(event.target.value)} /></label><label>Closes<input required type="time" value={closesAt} disabled={isDisabled || !scheduleId} onChange={(event) => setClosesAt(event.target.value)} /></label><label>Capacity<input required min="0" type="number" value={capacity} disabled={isDisabled || !scheduleId} onChange={(event) => setCapacity(event.target.value)} /></label></>}
       <button type="submit" className="button button--primary override-form__action" disabled={isDisabled || !scheduleId || isSaving}>{isSaving ? 'Saving...' : 'Add override'}</button>
     </form>

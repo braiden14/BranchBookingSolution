@@ -5,6 +5,7 @@ import { LoadingOverlay } from '../../../components/ui/LoadingOverlay'
 import { useToast } from '../../../components/ui/ToastProvider'
 import { useBranchConfiguration } from '../hooks/useBranchConfiguration'
 import { useOperationalSchedule } from '../hooks/useOperationalSchedule'
+import { activateBranch } from '../services/branches.service'
 import { BranchServicesConfiguration } from './BranchServicesConfiguration'
 import { CapacityOverridesConfiguration } from './CapacityOverridesConfiguration'
 import { DateOverridesConfiguration } from './DateOverridesConfiguration'
@@ -29,6 +30,9 @@ export function BranchConfigurationWorkspace() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<ConfigurationTab>('services')
+  const [isActivating, setIsActivating] = useState(false)
+  const [isActivated, setIsActivated] = useState(false)
+  const [activationError, setActivationError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!schedule) return
@@ -59,12 +63,29 @@ export function BranchConfigurationWorkspace() {
     }
   }
 
+  const activate = async () => {
+    setIsActivating(true)
+    setActivationError(null)
+    try {
+      await activateBranch(branchId)
+      setIsActivated(true)
+      showToast('Branch activated and accepting bookings.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The branch could not be activated.'
+      setActivationError(message)
+      showToast(message, 'error')
+    } finally {
+      setIsActivating(false)
+  }
+  }
+
   if (isScheduleLoading || configuration.isLoading) return <div className="configuration-page"><div className="skeleton-card configuration-loading" /></div>
   if (scheduleError || configuration.error) return <div className="configuration-page"><div className="error-state"><p>{scheduleError || configuration.error}</p><button className="button button--secondary" onClick={() => navigate('/branches')}>Back to branches</button></div></div>
 
   return <div className="configuration-page">
     <button className="back-link" onClick={() => navigate('/branches')}><ArrowLeft size={16} /> Back to branches</button>
-    <div className="page-heading page-heading--configuration"><div><span className="eyebrow">Branch setup / configuration</span><h1>Configure your branch</h1><p className="page-heading__description">Set up services, operating hours, and booking availability.</p></div><span className="setup-step">Branch configuration</span></div>
+    <div className="page-heading page-heading--configuration"><div><span className="eyebrow">Branch setup / configuration</span><h1>Configure your branch</h1><p className="page-heading__description">Set up services, operating hours, and booking availability.</p></div><button type="button" className="button button--primary activation-button" disabled={isActivating || isActivated} onClick={() => void activate()}>{isActivating ? 'Activating...' : isActivated ? 'Active & accepting bookings' : 'Activate & accept bookings'}</button></div>
+    {activationError && <p className="form-error activation-error">{activationError}</p>}
 
     <div className="configuration-tabs" role="tablist" aria-label="Branch configuration sections">
       <button type="button" role="tab" aria-selected={activeTab === 'services'} className={`configuration-tab ${activeTab === 'services' ? 'configuration-tab--active' : ''}`} onClick={() => setActiveTab('services')}>Services</button>
@@ -82,7 +103,7 @@ export function BranchConfigurationWorkspace() {
     </>}
 
     {activeTab === 'schedule' && <form onSubmit={submit}>
-      <section className="section-card configuration-card"><div className="configuration-card__title"><span className="configuration-icon"><CalendarDays size={20} /></span><div><h2>Operational schedule</h2><p>Choose the period this weekly schedule will apply.</p></div></div><div className="form-grid schedule-dates"><label>Effective from<input required type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} /></label><label>Effective to <span className="optional">Optional</span><input type="date" min={effectiveFrom} value={effectiveTo} onChange={(event) => setEffectiveTo(event.target.value)} /></label></div></section>
+      <section className="section-card configuration-card"><div className="configuration-card__title"><span className="configuration-icon"><CalendarDays size={20} /></span><div><h2>Operational schedule</h2><p>Choose the period this weekly schedule will apply.</p></div></div><div className="form-grid schedule-dates"><label>Effective from<input required type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} /></label><label>Effective to <span className="optional">[Optional]</span><input type="date" min={effectiveFrom} value={effectiveTo} onChange={(event) => setEffectiveTo(event.target.value)} /></label></div></section>
       <section className="section-card configuration-card"><div className="configuration-card__title"><span className="configuration-icon"><Clock3 size={20} /></span><div><h2>Weekly operating hours</h2><p>These hours will repeat for every day in the selected period.</p></div></div><div className="weekly-hours-list">{weeklyHours.map((hours, index) => <div className={`weekly-row ${hours.isClosed ? 'weekly-row--closed' : ''}`} key={hours.dayOfWeek}><strong>{days[index]}</strong><label className="closed-toggle"><input type="checkbox" checked={hours.isClosed} onChange={(event) => toggleClosed(index, event.target.checked)} /><span />Closed</label>{hours.isClosed ? <span className="closed-label">This branch will not accept bookings</span> : <><label>Opens<input required type="time" value={hours.opensAt ?? ''} onChange={updateTime(index, 'opensAt')} /></label><span className="time-separator">to</span><label>Closes<input required type="time" value={hours.closesAt ?? ''} onChange={updateTime(index, 'closesAt')} /></label><label>Daily capacity<input required min="1" type="number" value={hours.capacity ?? ''} onChange={(event) => updateDay(index, 'capacity', Number(event.target.value))} /></label></>}</div>)}</div></section>
       {saveError && <p className="form-error">{saveError}</p>}<div className="configuration-actions"><button type="button" className="button button--secondary" onClick={() => navigate('/branches')} disabled={isSaving}>Back to branches</button><button type="submit" className="button button--primary" disabled={isSaving}>{isSaving ? <LoadingOverlay label="Saving..." /> : <><Save size={16} />Save operating schedule<Check size={15} /></>}</button></div>
     </form>}

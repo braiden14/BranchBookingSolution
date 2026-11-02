@@ -5,7 +5,16 @@ export async function apiClient<T>(path: string, options?: RequestInit): Promise
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
-  if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`
+    try {
+      const problem = await response.json() as { detail?: string }
+      if (problem.detail) message = problem.detail
+    } catch {
+      // Keep the status-based message when the response has no JSON body.
+    }
+    throw new Error(message)
+  }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }

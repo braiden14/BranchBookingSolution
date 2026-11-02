@@ -2,13 +2,17 @@
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Request;
+using BranchBooking.Application.Models.Schedule;
 using BranchBooking.Core.Entities;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
 
 namespace BranchBooking.Application.Services
 {
-    public class BranchService(IBranchRepository branchRepository) : IBranchService
+    public class BranchService(
+        IBranchRepository branchRepository,
+        IOperationalScheduleRepository? scheduleRepository = null,
+        IBranchConfigurationRepository? configurationRepository = null) : IBranchService
     {
         public async Task<IEnumerable<BranchDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
         {
@@ -32,12 +36,63 @@ namespace BranchBooking.Application.Services
             return await branchRepository.AddAsync(branch, cancellationToken);
         }
 
+        public async Task ActivateAsync(long branchId, CancellationToken cancellationToken = default)
+        {
+            if (branchId <= 0)
+            {
+                throw new DomainValidationException("Branch ID must be greater than zero.");
+            }
+
+            if (scheduleRepository is null || configurationRepository is null)
+            {
+                throw new DomainValidationException("Branch activation dependencies are not configured.");
+            }
+
+            var schedule = await scheduleRepository.GetForBranchAsync(
+                branchId,
+                DateOnly.FromDateTime(DateTime.UtcNow),
+                cancellationToken);
+
+            if (schedule is null || !HasValidOperatingHours(schedule.WeeklyHours))
+            {
+                throw new DomainValidationException(
+                    "The branch must have valid operational hours before it can be activated.");
+            }
+
+            var branchServices = await configurationRepository.GetBranchServicesAsync(
+                branchId,
+                cancellationToken);
+
+            if (!branchServices.Any(service => service.IsActive))
+            {
+                throw new DomainValidationException(
+                    "The branch must have at least one active service before it can be activated.");
+            }
+
+            if (!await branchRepository.ActivateAsync(branchId, cancellationToken))
+            {
+                throw new DomainValidationException("The branch could not be found.");
+            }
+        }
+
         private void ValidateRequest(CreateBranchRequest? request)
         {
             if (request is null)
             {
                 throw new DomainValidationException("Branch request is required.");
             }
+        }
+
+        private static bool HasValidOperatingHours(IEnumerable<WeeklyOperatingHoursRecord> weeklyHours)
+        {
+            var hours = weeklyHours.ToArray();
+            return hours.Length == 7 &&
+                hours.Select(day => day.DayOfWeek).Distinct().Count() == 7 &&
+                hours.All(day => day.IsClosed ||
+                    (day.OpensAt.HasValue &&
+                     day.ClosesAt.HasValue &&
+                     day.ClosesAt > day.OpensAt &&
+                     day.Capacity is > 0));
         }
 
         private static BranchDto MapToDto(Branch branch)

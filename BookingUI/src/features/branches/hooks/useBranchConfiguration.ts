@@ -56,12 +56,25 @@ export function useBranchConfiguration(branchId: number) {
     await upsertBranchService(branchId, request)
     setBranchServices((current) => {
       const existing = current.find((service) => service.serviceId === request.serviceId)
-      if (!existing) return current
+      if (!existing) {
+        const offered = offeredServices.find((service) => service.id === request.serviceId)
+        if (!offered) return current
+        return [...current, {
+          branchServiceId: 0,
+          branchId,
+          serviceId: offered.id,
+          serviceCode: offered.code,
+          serviceName: offered.name,
+          serviceDurationMinutes: offered.serviceDurationMinutes,
+          isActive: request.isActive,
+          createdAtUtc: new Date().toISOString(),
+        }]
+      }
       return current.map((service) => service.serviceId === request.serviceId
         ? { ...service, isActive: request.isActive }
         : service)
     })
-  }, [branchId])
+  }, [branchId, offeredServices])
 
   const addDateOverride = useCallback(async (request: DateOverrideRequest) => {
     const overrideId = await createDateOverride(branchId, request)
