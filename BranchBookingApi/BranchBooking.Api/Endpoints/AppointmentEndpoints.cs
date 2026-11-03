@@ -12,7 +12,13 @@ public static class AppointmentEndpoints
         var group = endpoints.MapGroup("/api/customer").WithTags("Customer appointments").RequireAuthorization("CustomerOnly");
         group.MapGet("/branches", (IAppointmentService service, CancellationToken cancellationToken) => service.GetBookableBranchesAsync(cancellationToken));
         group.MapGet("/branches/{branchId:long}/services", (long branchId, IAppointmentService service, CancellationToken cancellationToken) => service.GetBookableServicesAsync(branchId, cancellationToken));
-        group.MapGet("/branches/{branchId:long}/availability", (long branchId, long serviceId, DateOnly date, long? excludingAppointmentId, IAppointmentService service, CancellationToken cancellationToken) => service.GetAvailableSlotsAsync(branchId, serviceId, date, excludingAppointmentId, cancellationToken));
+        group.MapGet("/branches/{branchId:long}/availability", async (long branchId, long serviceId, DateOnly date, long? excludingAppointmentId, ClaimsPrincipal principal, IAppointmentService service, CancellationToken cancellationToken) =>
+        {
+            var customerId = GetUserId(principal);
+            return customerId is null
+                ? Results.Unauthorized()
+                : Results.Ok(await service.GetAvailableSlotsAsync(customerId.Value, branchId, serviceId, date, excludingAppointmentId, cancellationToken));
+        });
         group.MapGet("/appointments", async (bool history, ClaimsPrincipal principal, IAppointmentService service, CancellationToken cancellationToken) =>
         {
             var customerId = GetUserId(principal);

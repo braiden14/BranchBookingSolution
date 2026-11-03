@@ -22,12 +22,13 @@ public sealed class AppointmentService(IAppointmentRepository repository) : IApp
             .Select(service => new CustomerServiceDto(service.ServiceId, service.Code, service.Name, service.DurationMinutes)).ToArray();
     }
 
-    public async Task<IEnumerable<AvailableSlotDto>> GetAvailableSlotsAsync(long branchId, long serviceId, DateOnly date, long? excludingAppointmentId = null, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<AvailableSlotDto>> GetAvailableSlotsAsync(long customerId, long branchId, long serviceId, DateOnly date, long? excludingAppointmentId = null, CancellationToken cancellationToken = default)
     {
+        ValidateId(customerId, "Customer ID");
         ValidateId(branchId, "Branch ID");
         ValidateId(serviceId, "Service ID");
         ValidateDate(date);
-        return (await repository.GetAvailableSlotsAsync(branchId, serviceId, date, excludingAppointmentId, cancellationToken))
+        return (await repository.GetAvailableSlotsAsync(customerId, branchId, serviceId, date, excludingAppointmentId, cancellationToken))
             .Select(slot => new AvailableSlotDto(slot.StartAt, slot.EndAt)).ToArray();
     }
 
@@ -41,7 +42,7 @@ public sealed class AppointmentService(IAppointmentRepository repository) : IApp
         ArgumentNullException.ThrowIfNull(request);
         ValidateDateTime(request.StartAt);
         var date = DateOnly.FromDateTime(request.StartAt);
-        var slots = await repository.GetAvailableSlotsAsync(request.BranchId, request.ServiceId, date, null, cancellationToken);
+        var slots = await repository.GetAvailableSlotsAsync(customerId, request.BranchId, request.ServiceId, date, null, cancellationToken);
         if (!slots.Any(slot => slot.StartAt == request.StartAt)) throw new DomainValidationException("The selected appointment slot is no longer available.");
         return await repository.CreateAsync(customerId, request.BranchId, request.ServiceId, request.StartAt, cancellationToken);
     }
