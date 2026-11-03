@@ -74,4 +74,42 @@ public sealed class BranchConfigurationServiceTests
         _configurationRepository.DidNotReceive().UpsertCapacityOverrideAsync(
             Arg.Any<long>(), Arg.Any<UpsertCapacityOverrideRequest>(), Arg.Any<CancellationToken>());
     }
+
+    [Test]
+    public async Task CreateDateOverrideAsync_WhenScheduleDoesNotBelongToBranch_RejectsRequest()
+    {
+        var date = new DateOnly(2025, 1, 2);
+        _scheduleRepository.GetForBranchAsync(7, date, Arg.Any<CancellationToken>()).Returns((Core.Models.Schedule.OperationalScheduleRecord?)null);
+        var request = new CreateDateOverrideRequest(99, date, null, false, new TimeOnly(9), new TimeOnly(17), 10);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _configurationService.CreateDateOverrideAsync(7, request));
+
+        Assert.That(exception!.Message, Is.EqualTo("The operational schedule does not belong to this branch or date."));
+        await _configurationRepository.DidNotReceive().CreateDateOverrideAsync(Arg.Any<long>(), Arg.Any<CreateDateOverrideRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task UpdateDateOverrideAsync_WhenOverrideDoesNotBelongToBranch_RejectsRequest()
+    {
+        var date = new DateOnly(2025, 1, 2);
+        _configurationRepository.GetDateOverridesAsync(7, null, null, Arg.Any<CancellationToken>()).Returns(Array.Empty<DateOverrideRecord>());
+        var request = new UpdateDateOverrideRequest(date, null, false, new TimeOnly(9), new TimeOnly(17), 10);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _configurationService.UpdateDateOverrideAsync(7, 99, request));
+
+        Assert.That(exception!.Message, Is.EqualTo("Date override was not found for this branch."));
+        await _configurationRepository.DidNotReceive().UpdateDateOverrideAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UpdateDateOverrideRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetDateOverridesAsync_WhenDateRangeIsInvalid_RejectsBeforeRepositoryCall()
+    {
+        var from = new DateOnly(2025, 1, 10);
+        var to = new DateOnly(2025, 1, 1);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _configurationService.GetDateOverridesAsync(7, from, to));
+
+        Assert.That(exception!.Message, Is.EqualTo("The end date cannot be before the start date."));
+        await _configurationRepository.DidNotReceive().GetDateOverridesAsync(Arg.Any<long>(), Arg.Any<DateOnly?>(), Arg.Any<DateOnly?>(), Arg.Any<CancellationToken>());
+    }
 }

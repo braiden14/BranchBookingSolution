@@ -1,5 +1,7 @@
 ﻿using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Core.Models.Branch;
+using BranchBooking.Core.Models.Configuration;
+using BranchBooking.Core.Models.Schedule;
 using BranchBooking.Application.Models.Request;
 using BranchBooking.Application.Services;
 using BranchBooking.Core.Enums;
@@ -19,6 +21,48 @@ namespace BranchBooking.Tests.ServiceTests
         {
             _branchRepository = Substitute.For<IBranchRepository>();
             _branchService = new BranchService(_branchRepository);
+        }
+
+        [Test]
+        public void ActivateAsync_WhenScheduleDependenciesAreMissing_RejectsActivation()
+        {
+            var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _branchService.ActivateAsync(7));
+
+            Assert.That(exception!.Message, Is.EqualTo("Branch activation dependencies are not configured."));
+        }
+
+        [Test]
+        public async Task ActivateAsync_WhenScheduleAndServiceAreValid_ActivatesBranch()
+        {
+            var scheduleRepository = Substitute.For<IOperationalScheduleRepository>();
+            var configurationRepository = Substitute.For<IBranchConfigurationRepository>();
+            var service = new BranchService(_branchRepository, scheduleRepository, configurationRepository);
+            scheduleRepository.GetForBranchAsync(7, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+                .Returns(new OperationalScheduleRecord(2, 7, DateOnly.FromDateTime(DateTime.UtcNow), null, true, CreateWeeklyHours()));
+            configurationRepository.GetBranchServicesAsync(7, Arg.Any<CancellationToken>())
+                .Returns(new[] { new BranchServiceRecord(11, 7, 3, "CONSULT", "Consultation", 30, true, DateTime.UtcNow) });
+            _branchRepository.ActivateAsync(7, Arg.Any<CancellationToken>()).Returns(true);
+
+            await service.ActivateAsync(7);
+
+            await _branchRepository.Received(1).ActivateAsync(7, Arg.Any<CancellationToken>());
+        }
+
+        [Test]
+        public async Task ActivateAsync_WhenNoActiveServiceExists_RejectsActivation()
+        {
+            var scheduleRepository = Substitute.For<IOperationalScheduleRepository>();
+            var configurationRepository = Substitute.For<IBranchConfigurationRepository>();
+            var service = new BranchService(_branchRepository, scheduleRepository, configurationRepository);
+            scheduleRepository.GetForBranchAsync(7, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+                .Returns(new OperationalScheduleRecord(2, 7, DateOnly.FromDateTime(DateTime.UtcNow), null, true, CreateWeeklyHours()));
+            configurationRepository.GetBranchServicesAsync(7, Arg.Any<CancellationToken>())
+                .Returns(new[] { new BranchServiceRecord(11, 7, 3, "CONSULT", "Consultation", 30, true, DateTime.UtcNow) with { IsActive = false } });
+
+            var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await service.ActivateAsync(7));
+
+            Assert.That(exception!.Message, Is.EqualTo("The branch must have at least one active service before it can be activated."));
+            await _branchRepository.DidNotReceive().ActivateAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
         }
 
         [Test]
@@ -183,5 +227,9 @@ namespace BranchBooking.Tests.ServiceTests
             Assert.That(exception!.Message, Is.EqualTo("Branch request is required."));
             _branchRepository.DidNotReceive().AddAsync(Arg.Any<Branch>(), Arg.Any<CancellationToken>());
         }
+
+    private static IReadOnlyList<WeeklyOperatingHoursRecord> CreateWeeklyHours() => Enumerable.Range(1, 7)
+        .Select(day => new WeeklyOperatingHoursRecord(day, 2, (short)day, new TimeOnly(9), new TimeOnly(17), false, 10))
+        .ToArray();
     }
 }
