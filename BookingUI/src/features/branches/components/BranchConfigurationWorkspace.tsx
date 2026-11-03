@@ -14,7 +14,8 @@ import type { Branch, UpdateBranchRequest } from '../types/branch.types'
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const today = new Date().toISOString().slice(0, 10)
-const defaultHours = (): WeeklyOperatingHours[] => days.map((_, index) => ({ dayOfWeek: index + 1, opensAt: index > 4 ? '09:00' : '08:00', closesAt: index > 4 ? '13:00' : '17:00', isClosed: index === 6, capacity: index === 6 ? 0 : 10 }))
+// PostgreSQL EXTRACT(DOW) and the schema use Sunday=1 ... Saturday=7.
+const defaultHours = (): WeeklyOperatingHours[] => days.map((_, index) => ({ dayOfWeek: (index + 1) % 7 + 1, opensAt: index > 4 ? '09:00' : '08:00', closesAt: index > 4 ? '13:00' : '17:00', isClosed: index === 6, capacity: index === 6 ? 0 : 10 }))
 
 type ConfigurationTab = 'details' | 'services' | 'schedule' | 'overrides'
 

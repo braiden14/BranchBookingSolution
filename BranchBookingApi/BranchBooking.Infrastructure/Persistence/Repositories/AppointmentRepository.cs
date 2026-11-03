@@ -1,6 +1,7 @@
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Models.Appointment;
 using BranchBooking.Core.Enums;
+using BranchBooking.Core.Exceptions;
 using Dapper;
 using System.Data;
 
@@ -35,12 +36,19 @@ SELECT local_start AS StartAt, local_end AS EndAt FROM candidates c WHERE local_
         await using var connection = connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-        //await connection.ExecuteAsync(new CommandDefinition("SELECT pg_advisory_xact_lock(@BranchId, @DateHash)", new { BranchId = branchId, DateHash = startAt.Date.GetHashCode() }, transaction, cancellationToken: cancellationToken));
+        // PostgreSQL has one-key and (int, int) advisory-lock overloads, not
+        // (bigint, bigint). Hash a stable branch/date key into the one-key form.
+        await connection.ExecuteAsync(new CommandDefinition(
+            "SELECT pg_advisory_xact_lock(hashtextextended(@LockKey, 0))",
+            new { LockKey = $"branch:{branchId}:date:{startAt:yyyy-MM-dd}" },
+            transaction,
+            cancellationToken: cancellationToken));
         var duration = await connection.ExecuteScalarAsync<int?>(new CommandDefinition("SELECT s.service_duration_minutes FROM public.offered_services s JOIN public.branch_services bs ON bs.service_id = s.id JOIN public.branches b ON b.id = bs.branch_id WHERE s.id = @ServiceId AND bs.branch_id = @BranchId AND bs.is_active AND b.status = 1 AND b.accepts_bookings", new { BranchId = branchId, ServiceId = serviceId }, transaction, cancellationToken: cancellationToken));
         if (duration is null) throw new InvalidOperationException("The selected service is not available at this branch.");
-        var id = await connection.ExecuteScalarAsync<long>(new CommandDefinition("INSERT INTO public.appointments(customer_id, branch_id, service_id, starts_at_utc, ends_at_utc) VALUES (@CustomerId, @BranchId, @ServiceId, @StartAt AT TIME ZONE 'Africa/Johannesburg', (@StartAt + make_interval(mins => @Duration)) AT TIME ZONE 'Africa/Johannesburg') RETURNING id", new { CustomerId = customerId, BranchId = branchId, ServiceId = serviceId, StartAt = startAt, Duration = duration.Value }, transaction, cancellationToken: cancellationToken));
+        var id = await connection.ExecuteScalarAsync<long?>(new CommandDefinition("INSERT INTO public.appointments(customer_id, branch_id, service_id, starts_at_utc, ends_at_utc) SELECT @CustomerId, @BranchId, @ServiceId, @StartAt AT TIME ZONE 'Africa/Johannesburg', (@StartAt + make_interval(mins => @Duration)) AT TIME ZONE 'Africa/Johannesburg' WHERE NOT EXISTS (SELECT 1 FROM public.appointments WHERE customer_id = @CustomerId AND branch_id = @BranchId AND starts_at_utc = @StartAt AT TIME ZONE 'Africa/Johannesburg' AND status = 'Confirmed') RETURNING id", new { CustomerId = customerId, BranchId = branchId, ServiceId = serviceId, StartAt = startAt, Duration = duration.Value }, transaction, cancellationToken: cancellationToken));
+        if (id is null) throw new DomainValidationException("You already have an appointment at this branch and time.");
         await transaction.CommitAsync(cancellationToken);
-        return id;
+        return id.Value;
     }
 
     public async Task<bool> CancelAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default) => await ExecuteBoolAsync("UPDATE public.appointments SET status = 'Cancelled' WHERE id = @AppointmentId AND customer_id = @CustomerId AND status = 'Confirmed' AND starts_at_utc > now()", new { CustomerId = customerId, AppointmentId = appointmentId }, cancellationToken);
