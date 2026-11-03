@@ -1,6 +1,7 @@
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Authentication;
+using BranchBooking.Core.Models.Authentication;
 using BranchBooking.Application.Services;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
@@ -57,7 +58,7 @@ public sealed class AuthenticationServiceTests
     [Test]
     public async Task RefreshAsync_WhenRotatedTokenIsReused_RevokesTokenFamily()
     {
-        var session = new RefreshSessionRecord(9, 5, Guid.NewGuid(), "hash", DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddMinutes(-1), 10);
+        var session = new RefreshSessionRecord(9, 5, Guid.NewGuid(), "hash", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddMinutes(-1), 10);
         _tokens.HashRefreshToken("refresh").Returns("hash");
         _repository.GetRefreshSessionAsync("hash", Arg.Any<CancellationToken>()).Returns(session);
 

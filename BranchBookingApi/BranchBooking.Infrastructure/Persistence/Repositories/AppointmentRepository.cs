@@ -1,5 +1,5 @@
 using BranchBooking.Application.Interfaces.Repositories;
-using BranchBooking.Application.Models.Appointment;
+using BranchBooking.Core.Models.Appointment;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
 using Dapper;

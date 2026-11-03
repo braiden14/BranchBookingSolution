@@ -18,8 +18,11 @@ export function LoginPage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      await signIn(email, password)
-      const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/'
+      const signedInUser = await signIn(email, password)
+      const requestedDestination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
+      const destination = signedInUser.role === 'customer'
+        ? '/appointments'
+        : requestedDestination ?? '/'
       navigate(destination, { replace: true })
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'Sign in failed. Please try again.')

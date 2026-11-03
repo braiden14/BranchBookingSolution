@@ -1,7 +1,7 @@
 ﻿using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
 
-namespace BranchBooking.Core.Entities;
+namespace BranchBooking.Core.Models.Branch;
 
 public sealed class Branch
 {

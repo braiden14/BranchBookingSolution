@@ -1,4 +1,4 @@
-namespace BranchBooking.Application.Models.Customer;
+namespace BranchBooking.Core.Models.Customer;
 
 public sealed record CustomerRecord(
     long CustomerId,

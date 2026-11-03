@@ -1,6 +1,5 @@
 ﻿using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Models.Request;
-using BranchBooking.Core.Entities;
 
 namespace BranchBooking.Application.Interfaces.Services
 {

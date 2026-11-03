@@ -3,6 +3,7 @@ using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Authentication;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
+using BranchBooking.Core.Models.Authentication;
 
 namespace BranchBooking.Application.Services;
 

@@ -1,6 +1,6 @@
 using BranchBooking.Core.Enums;
 
-namespace BranchBooking.Application.Models.Appointment;
+namespace BranchBooking.Core.Models.Appointment;
 
 public sealed record AppointmentRecord(
     long AppointmentId,

@@ -1,5 +1,5 @@
 using BranchBooking.Application.Interfaces.Repositories;
-using BranchBooking.Application.Models.Customer;
+using BranchBooking.Core.Models.Customer;
 using Dapper;
 
 namespace BranchBooking.Infrastructure.Persistence.Repositories;

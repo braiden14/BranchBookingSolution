@@ -1,6 +1,4 @@
-using BranchBooking.Core.Enums;
-
-namespace BranchBooking.Application.Models.Branch;
+namespace BranchBooking.Core.Models.Branch;
 
 public sealed record BranchListItemRecord(
     long Id,

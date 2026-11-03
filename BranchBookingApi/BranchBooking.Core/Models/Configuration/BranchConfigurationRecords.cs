@@ -1,4 +1,4 @@
-namespace BranchBooking.Application.Models.Configuration;
+namespace BranchBooking.Core.Models.Configuration;
 
 public sealed record OfferedServiceRecord(
     long Id,

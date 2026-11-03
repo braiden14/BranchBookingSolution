@@ -1,7 +1,7 @@
 using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Interfaces.Services;
-using BranchBooking.Application.Models.Configuration;
+using BranchBooking.Core.Models.Configuration;
 using BranchBooking.Application.Models.Request;
 using BranchBooking.Core.Exceptions;
 

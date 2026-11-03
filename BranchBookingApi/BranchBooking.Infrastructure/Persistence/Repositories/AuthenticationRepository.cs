@@ -1,6 +1,7 @@
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Models.Authentication;
 using BranchBooking.Core.Enums;
+using BranchBooking.Core.Models.Authentication;
 using Dapper;
 using System.Data;
 

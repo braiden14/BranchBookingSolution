@@ -1,4 +1,4 @@
-using BranchBooking.Application.Models.Customer;
+using BranchBooking.Core.Models.Customer;
 
 namespace BranchBooking.Application.Interfaces.Repositories;
 

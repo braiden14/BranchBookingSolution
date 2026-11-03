@@ -1,5 +1,6 @@
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Models.Schedule;
+using BranchBooking.Core.Models.Schedule;
 using Dapper;
 using System.Data;
 

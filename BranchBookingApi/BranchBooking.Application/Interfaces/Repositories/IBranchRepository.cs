@@ -1,5 +1,4 @@
-﻿using BranchBooking.Core.Entities;
-using BranchBooking.Application.Models.Branch;
+﻿using BranchBooking.Core.Models.Branch;
 using BranchBooking.Application.Models.Request;
 
 namespace BranchBooking.Application.Interfaces.Repositories

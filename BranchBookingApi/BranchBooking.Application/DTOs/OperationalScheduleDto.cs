@@ -1,4 +1,4 @@
-using BranchBooking.Application.Models.Schedule;
+using BranchBooking.Core.Models.Schedule;
 
 namespace BranchBooking.Application.DTOs;
 

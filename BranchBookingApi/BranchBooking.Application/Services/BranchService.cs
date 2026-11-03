@@ -1,10 +1,9 @@
 ﻿using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Interfaces.Services;
-using BranchBooking.Application.Models.Branch;
+using BranchBooking.Core.Models.Branch;
 using BranchBooking.Application.Models.Request;
-using BranchBooking.Application.Models.Schedule;
-using BranchBooking.Core.Entities;
+using BranchBooking.Core.Models.Schedule;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
 

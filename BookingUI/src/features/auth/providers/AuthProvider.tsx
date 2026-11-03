@@ -7,7 +7,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   hasRole: (roles: UserRole[]) => boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<AuthUser>
   signOut: () => void
 }
 
@@ -30,8 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: user !== null,
     isLoading,
     hasRole: (roles) => user !== null && roles.some((role) => user.roles.includes(role)),
-    signIn: async (email, password) => setUser(toAuthUser(await authService.login(email, password))),
-    signOut: () => { void authService.logout().finally(() => setUser(null)) },
+    signIn: async (email, password) => {
+      const signedInUser = toAuthUser(await authService.login(email, password))
+      setUser(signedInUser)
+      return signedInUser
+    },
+    signOut: () => {
+      setUser(null)
+      void authService.logout()
+    },
   }), [isLoading, user])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,4 +1,5 @@
 using BranchBooking.Application.Models.Authentication;
+using BranchBooking.Core.Models.Authentication;
 
 namespace BranchBooking.Application.Interfaces.Repositories;
 

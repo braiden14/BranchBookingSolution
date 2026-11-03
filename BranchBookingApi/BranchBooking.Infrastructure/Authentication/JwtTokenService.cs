@@ -1,5 +1,6 @@
 using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Authentication;
+using BranchBooking.Core.Models.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
