@@ -8,6 +8,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('en-ZA', { dateSty
 
 export function OperationalAppointmentsPage() {
   const { user } = useAuth()
+  const canViewHistory = user?.role === 'admin' || user?.role === 'branch-manager'
   const [history, setHistory] = useState(false)
   const [pageNumber, setPageNumber] = useState(1)
   const [page, setPage] = useState<PagedOperationalAppointments | null>(null)
@@ -16,8 +17,9 @@ export function OperationalAppointmentsPage() {
   const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
+    if (!canViewHistory && history) setHistory(false)
     setPageNumber(1)
-  }, [history, user?.id])
+  }, [history, user?.id, canViewHistory])
 
   useEffect(() => {
     let isCurrent = true
@@ -31,7 +33,7 @@ export function OperationalAppointmentsPage() {
 
   return <div className="appointments-page">
     <div className="page-heading"><div><span className="eyebrow">Operations / appointments</span><h1>{history ? 'Appointment history' : 'Upcoming appointments'}</h1><p className="page-heading__description">{user?.role === 'admin' ? 'Review appointments across every branch.' : 'Review appointments for your assigned branch.'}</p></div></div>
-    <div className="configuration-tabs" role="tablist"><button className={`configuration-tab ${!history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(false)}>Upcoming</button><button className={`configuration-tab ${history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(true)}>History</button></div>
+     <div className="configuration-tabs" role="tablist"><button className={`configuration-tab ${!history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(false)}>Upcoming</button>{canViewHistory && <button className={`configuration-tab ${history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(true)}>History</button>}</div>
      {error && <div className="error-state" role="alert"><p>{error}</p><button className="button button--secondary" onClick={() => setRetryKey(current => current + 1)}>Try again</button></div>}
      {isLoading ? <div className="table-loading"><div className="skeleton-card" /><div className="skeleton-card" /></div> : !error && <AppointmentTable appointments={page?.items ?? []} history={history} />}
     {page && <div className="table-pagination"><span>{page.totalCount ? `Showing ${(page.pageNumber - 1) * page.pageSize + 1}–${Math.min(page.pageNumber * page.pageSize, page.totalCount)} of ${page.totalCount}` : 'No appointments'}</span><div><button className="icon-button" disabled={page.pageNumber <= 1} onClick={() => setPageNumber(current => current - 1)} aria-label="Previous page"><ChevronLeft size={16} /></button><span>Page {page.pageNumber} of {Math.max(page.totalPages, 1)}</span><button className="icon-button" disabled={page.pageNumber >= page.totalPages} onClick={() => setPageNumber(current => current + 1)} aria-label="Next page"><ChevronRight size={16} /></button></div></div>}

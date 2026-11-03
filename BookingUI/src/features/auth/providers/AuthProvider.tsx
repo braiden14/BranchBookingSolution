@@ -44,9 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-function toAuthUser(response: { id: number; email: string; firstName: string; lastName: string; roles: string[] }): AuthUser {
+function toAuthUser(response: { id: number; email: string; firstName: string; lastName: string; roles: string[]; assignedBranchId: number | null }): AuthUser {
   const roles = response.roles.map((role) => role.toLowerCase().replace('administrator', 'admin').replace('branchmanager', 'branch-manager').replace('branch manager', 'branch-manager')) as UserRole[]
-  return { id: response.id.toString(), name: `${response.firstName} ${response.lastName}`, email: response.email, role: roles[0] ?? 'staff', roles }
+  return { id: response.id.toString(), name: `${response.firstName} ${response.lastName}`, email: response.email, role: roles[0] ?? 'staff', roles, assignedBranchId: response.assignedBranchId }
 }
 
 export function useAuth() {

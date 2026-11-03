@@ -16,13 +16,18 @@ import { StaffPage } from '../features/staff/components/StaffPage'
 
 function HomeRedirect() {
   const { user } = useAuth()
-  return <Navigate to={user?.role === 'customer' ? '/appointments' : '/overview'} replace />
+  return <Navigate to={user?.role === 'customer' || user?.role === 'staff' || user?.role === 'branch-manager' ? '/appointments' : '/overview'} replace />
 }
 
 function ForbiddenPage() {
   const { user } = useAuth()
-  const home = user?.role === 'customer' ? '/appointments' : '/overview'
+  const home = user?.role === 'customer' || user?.role === 'staff' || user?.role === 'branch-manager' ? '/appointments' : '/overview'
   return <section className="empty-state"><span className="empty-state__icon">!</span><h1>Access restricted</h1><p className="muted">You do not have permission to view this page.</p><Link className="button button--primary" to={home}>Return to your workspace</Link></section>
+}
+
+function BranchManagerOnly({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  return user?.role === 'branch-manager' ? <>{children}</> : <Navigate to="/forbidden" replace />
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -38,13 +43,11 @@ export default function App() {
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
         <Route index element={<HomeRedirect />} />
-        <Route path="overview" element={<ProtectedRoute roles={['admin', 'branch-manager', 'staff']} />}>
+        <Route path="overview" element={<ProtectedRoute roles={['admin']} />}>
           <Route index element={<OverviewPage />} />
         </Route>
-        <Route element={<ProtectedRoute roles={['admin', 'branch-manager', 'staff']} />}>
-          <Route path="branches" element={<BranchesPage />} />
-          <Route path="branches/:branchId/configuration" element={<BranchConfigurationWorkspace />} />
-        </Route>
+        <Route path="branches" element={<ProtectedRoute roles={['admin']} />}><Route index element={<BranchesPage />} /></Route>
+        <Route path="branches/:branchId/configuration" element={<ProtectedRoute roles={['admin', 'branch-manager']} />}><Route index element={<BranchConfigurationWorkspace />} /></Route>
          <Route path="appointments" element={<AppointmentsPage />} />
          <Route path="customers" element={<AdminOnly><CustomersPage /></AdminOnly>} />
          <Route path="staff" element={<AdminOnly><StaffPage /></AdminOnly>} />

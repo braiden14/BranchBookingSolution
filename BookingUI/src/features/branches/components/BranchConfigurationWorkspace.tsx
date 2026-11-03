@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { LoadingOverlay } from '../../../components/ui/LoadingOverlay'
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog'
 import { useToast } from '../../../components/ui/ToastProvider'
+import { useAuth } from '../../auth/providers/AuthProvider'
 import { useBranchConfiguration } from '../hooks/useBranchConfiguration'
 import { useOperationalSchedule } from '../hooks/useOperationalSchedule'
 import { activateBranch, deactivateBranch, updateBranch } from '../services/branches.service'
@@ -23,18 +24,21 @@ type ConfigurationTab = 'details' | 'services' | 'schedule' | 'overrides'
 export function BranchConfigurationWorkspace() {
   const { branchId: branchIdParam } = useParams()
   const branchId = Number(branchIdParam)
+  const { user } = useAuth()
+  const isBranchManager = user?.role === 'branch-manager'
   const location = useLocation()
   const navigate = useNavigate()
   const branch = (location.state as { branch?: Branch } | null)?.branch
   const { schedule, isLoading: isScheduleLoading, error: scheduleError, save: saveSchedule } = useOperationalSchedule(branchId)
   const configuration = useBranchConfiguration(branchId)
   const { showToast } = useToast()
+  const returnPath = isBranchManager ? '/appointments' : '/branches'
   const [effectiveFrom, setEffectiveFrom] = useState(today)
   const [effectiveTo, setEffectiveTo] = useState('')
   const [weeklyHours, setWeeklyHours] = useState(defaultHours)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<ConfigurationTab>(branch ? 'details' : 'services')
+  const [activeTab, setActiveTab] = useState<ConfigurationTab>(isBranchManager ? 'services' : branch ? 'details' : 'services')
   const [branchForm, setBranchForm] = useState<UpdateBranchRequest>(branch ? {
     code: branch.code,
     name: branch.name,
@@ -60,7 +64,7 @@ export function BranchConfigurationWorkspace() {
   const updateDay = (index: number, field: keyof WeeklyOperatingHours, value: string | boolean | number | null) => setWeeklyHours((current) => current.map((hours, currentIndex) => currentIndex === index ? { ...hours, [field]: value } : hours))
   const toggleClosed = (index: number, isClosed: boolean) => setWeeklyHours((current) => current.map((hours, currentIndex) => currentIndex === index ? { ...hours, isClosed, opensAt: isClosed ? null : hours.opensAt ?? '08:00', closesAt: isClosed ? null : hours.closesAt ?? '17:00', capacity: isClosed ? 0 : hours.capacity || 10 } : hours))
   const updateTime = (index: number, field: 'opensAt' | 'closesAt') => (event: ChangeEvent<HTMLInputElement>) => updateDay(index, field, event.target.value)
-  const tabs: { id: ConfigurationTab; label: string; disabled?: boolean }[] = [{ id: 'details', label: 'Branch details', disabled: !branch }, { id: 'services', label: 'Services' }, { id: 'schedule', label: 'Operating schedule' }, { id: 'overrides', label: 'Overrides', disabled: !schedule }]
+  const tabs: { id: ConfigurationTab; label: string; disabled?: boolean }[] = [{ id: 'details', label: 'Branch details', disabled: isBranchManager || !branch }, { id: 'services', label: 'Services' }, { id: 'schedule', label: 'Operating schedule' }, { id: 'overrides', label: 'Overrides', disabled: !schedule }]
   const selectTab = (tab: ConfigurationTab) => setActiveTab(tab)
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
@@ -133,13 +137,13 @@ export function BranchConfigurationWorkspace() {
   }
 
   if (isScheduleLoading || configuration.isLoading) return <div className="configuration-page"><div className="skeleton-card configuration-loading" /></div>
-  if (scheduleError || configuration.error) return <div className="configuration-page"><div className="error-state"><p>{scheduleError || configuration.error}</p><button className="button button--secondary" onClick={() => navigate('/branches')}>Back to branches</button></div></div>
+  if (scheduleError || configuration.error) return <div className="configuration-page"><div className="error-state"><p>{scheduleError || configuration.error}</p><button className="button button--secondary" onClick={() => navigate(returnPath)}>Back</button></div></div>
 
   return <div className="configuration-page">
-    <button className="back-link" onClick={() => navigate('/branches')}><ArrowLeft size={16} /> Back to branches</button>
-      <div className="page-heading page-heading--configuration"><div><span className="eyebrow">Branch setup / configuration</span><h1>Configure your branch</h1><p className="page-heading__description">Set up services, operating hours, and booking availability.</p></div><button type="button" className="button button--primary activation-button" disabled={isActivating} onClick={() => void activate()}>{isActivating ? (isActivated ? 'Deactivating...' : 'Activating...') : isActivated ? 'Deactivate branch' : 'Activate & accept bookings'}</button></div>
-     {activationError && <p className="form-error activation-error">{activationError}</p>}
-     {showDeactivationConfirm && <ConfirmationDialog title="Deactivate this branch?" description="This will stop the branch from accepting bookings." confirmLabel="Deactivate branch" isConfirming={isActivating} onConfirm={() => void activate()} onClose={() => { if (!isActivating) setShowDeactivationConfirm(false) }} />}
+     <button className="back-link" onClick={() => navigate(returnPath)}><ArrowLeft size={16} /> Back</button>
+       <div className="page-heading page-heading--configuration"><div><span className="eyebrow">Branch setup / configuration</span><h1>Configure your branch</h1><p className="page-heading__description">Set up services, operating hours, and booking availability.</p></div>{!isBranchManager && <button type="button" className="button button--primary activation-button" disabled={isActivating} onClick={() => void activate()}>{isActivating ? (isActivated ? 'Deactivating...' : 'Activating...') : isActivated ? 'Deactivate branch' : 'Activate & accept bookings'}</button>}</div>
+      {!isBranchManager && activationError && <p className="form-error activation-error">{activationError}</p>}
+      {!isBranchManager && showDeactivationConfirm && <ConfirmationDialog title="Deactivate this branch?" description="This will stop the branch from accepting bookings." confirmLabel="Deactivate branch" isConfirming={isActivating} onConfirm={() => void activate()} onClose={() => { if (!isActivating) setShowDeactivationConfirm(false) }} />}
 
      <div className="configuration-tabs" role="tablist" aria-label="Branch configuration sections">{tabs.map((tab, index) => <button key={tab.id} id={`configuration-tab-${tab.id}`} type="button" role="tab" tabIndex={activeTab === tab.id ? 0 : -1} aria-selected={activeTab === tab.id} aria-controls={`configuration-panel-${tab.id}`} className={`configuration-tab ${activeTab === tab.id ? 'configuration-tab--active' : ''}`} disabled={tab.disabled} onKeyDown={event => handleTabKeyDown(event, index)} onClick={() => selectTab(tab.id)}>{tab.label}{tab.id === 'overrides' && !schedule && <span className="configuration-tab__lock">Save schedule first</span>}</button>)}</div>
 
@@ -154,7 +158,7 @@ export function BranchConfigurationWorkspace() {
         branchServices={configuration.branchServices}
         onSave={(serviceId, isActive) => configuration.saveBranchService({ serviceId, isActive })}
       />
-      <div className="configuration-actions configuration-actions--back"><button type="button" className="button button--secondary" onClick={() => navigate('/branches')}>Back to branches</button></div>
+       <div className="configuration-actions configuration-actions--back"><button type="button" className="button button--secondary" onClick={() => navigate(returnPath)}>Back</button></div>
      </div>}
 
      {activeTab === 'schedule' && <form id="configuration-panel-schedule" role="tabpanel" aria-labelledby="configuration-tab-schedule" tabIndex={0} onSubmit={submit}>

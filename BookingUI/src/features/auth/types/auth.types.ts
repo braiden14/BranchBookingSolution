@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string
   role: UserRole
   roles: UserRole[]
+  assignedBranchId: number | null
 }
 
 export interface RegisterCustomerRequest {
@@ -23,6 +24,7 @@ export interface AuthUserResponse {
   lastName: string
   phoneNumber: string | null
   roles: string[]
+  assignedBranchId: number | null
 }
 
 export interface AuthenticationResponse {

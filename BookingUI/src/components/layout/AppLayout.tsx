@@ -24,13 +24,18 @@ export function AppLayout() {
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [])
+  const roleNavigation = user?.role === 'branch-manager' && user.assignedBranchId
+    ? navigation.map(item => item.to === '/branches' ? { ...item, label: 'Branch', to: `/branches/${user.assignedBranchId}/configuration` } : item)
+    : navigation
   const visibleNavigation = user?.role === 'customer'
     ? navigation.filter(({ to }) => to === '/appointments')
-    : user?.role === 'staff' || user?.role === 'branch-manager'
-      ? navigation.filter(({ to }) => to !== '/customers' && to !== '/staff')
+    : user?.role === 'staff'
+      ? roleNavigation.filter(({ to }) => to === '/appointments')
+    : user?.role === 'branch-manager'
+      ? roleNavigation.filter(({ to }) => to === '/appointments' || to.startsWith('/branches/'))
     : user?.role === 'admin'
-      ? navigation
-    : navigation
+      ? roleNavigation
+    : roleNavigation
 
   return (
     <div className="app-shell">
