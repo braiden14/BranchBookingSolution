@@ -14,6 +14,7 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
         private const string ActivateFunction = "SELECT public.activate_branch(@BranchId)";
         private const string UpdateFunction = "SELECT public.update_branch(@BranchId, @Code, @Name, @AddressLine1, @City, @Province, @PostalCode)";
         private const string DeactivateFunction = "SELECT public.deactivate_branch(@BranchId)";
+        private const string GetByIdFunction = "SELECT * FROM public.get_branch_by_id(@BranchId)";
 
         public async Task<long> AddAsync(Branch branch, CancellationToken cancellationToken = default)
         {
@@ -109,7 +110,7 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
         {
             await using var connection = connectionFactory.CreateConnection();
             var row = await connection.QuerySingleOrDefaultAsync<BranchListItemDbRow>(new CommandDefinition(
-                "SELECT id, code, name, address_line_1, city, province, postal_code, status, accepts_bookings, created_at_utc, 1::BIGINT AS total_count FROM public.branches WHERE id = @BranchId",
+                GetByIdFunction,
                 new { BranchId = branchId },
                 cancellationToken: cancellationToken));
 
