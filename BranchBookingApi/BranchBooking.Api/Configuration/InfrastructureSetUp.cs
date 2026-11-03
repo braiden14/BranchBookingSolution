@@ -24,6 +24,7 @@ namespace BranchBooking.Api.Configuration
             services.AddSingleton<IOperationalScheduleRepository, OperationalScheduleRepository>();
             services.AddSingleton<IBranchConfigurationRepository, BranchConfigurationRepository>();
             services.AddSingleton<IAppointmentRepository, AppointmentRepository>();
+            services.AddSingleton<ICustomerRepository, CustomerRepository>();
             services.AddSingleton<IAuthenticationRepository, AuthenticationRepository>();
             services.AddSingleton<IPasswordService, PasswordService>();
 

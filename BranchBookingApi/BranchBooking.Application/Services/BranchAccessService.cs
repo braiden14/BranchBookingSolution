@@ -5,6 +5,9 @@ namespace BranchBooking.Application.Services;
 
 public sealed class BranchAccessService(IAuthenticationRepository authenticationRepository) : IBranchAccessService
 {
+    public Task<long?> GetStaffBranchIdAsync(long userId, CancellationToken cancellationToken = default) =>
+        authenticationRepository.GetStaffBranchIdAsync(userId, cancellationToken);
+
     public async Task<bool> CanReadBranchAsync(
         long userId,
         bool isAdmin,

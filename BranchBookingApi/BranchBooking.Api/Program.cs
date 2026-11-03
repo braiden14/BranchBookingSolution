@@ -84,6 +84,7 @@ app.MapAuthenticationEndpoints();
 app.MapOperationalScheduleEndpoints();
 app.MapBranchConfigurationEndpoints();
 app.MapAppointmentEndpoints();
+app.MapCustomerEndpoints();
 
 
 app.Run();

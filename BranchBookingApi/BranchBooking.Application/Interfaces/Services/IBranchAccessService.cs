@@ -8,4 +8,5 @@ public interface IBranchAccessService
         bool isStaff,
         long branchId,
         CancellationToken cancellationToken = default);
+    Task<long?> GetStaffBranchIdAsync(long userId, CancellationToken cancellationToken = default);
 }

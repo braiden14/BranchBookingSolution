@@ -14,3 +14,21 @@ public sealed record AppointmentDto(
     DateTime StartAt,
     DateTime EndAt,
     AppointmentStatus Status);
+public sealed record OperationalAppointmentDto(
+    long AppointmentId,
+    long CustomerId,
+    string CustomerName,
+    string CustomerEmail,
+    long BranchId,
+    string BranchName,
+    long ServiceId,
+    string ServiceName,
+    DateTime StartAt,
+    DateTime EndAt,
+    AppointmentStatus Status);
+public sealed record PagedOperationalAppointmentDto(
+    IReadOnlyList<OperationalAppointmentDto> Items,
+    int PageNumber,
+    int PageSize,
+    long TotalCount,
+    int TotalPages);

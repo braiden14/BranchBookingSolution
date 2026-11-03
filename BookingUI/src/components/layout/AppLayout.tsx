@@ -15,6 +15,8 @@ export function AppLayout() {
   const { user, signOut } = useAuth()
   const visibleNavigation = user?.role === 'customer'
     ? navigation.filter(({ to }) => to === '/appointments')
+    : user?.role === 'staff' || user?.role === 'branch-manager'
+      ? navigation.filter(({ to }) => to !== '/customers')
     : navigation
 
   return (

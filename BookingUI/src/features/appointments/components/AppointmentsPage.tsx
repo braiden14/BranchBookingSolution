@@ -4,11 +4,17 @@ import { useToast } from '../../../components/ui/ToastProvider'
 import { useAuth } from '../../auth/providers/AuthProvider'
 import { appointmentService } from '../services/appointment.service'
 import type { Appointment, AvailableSlot, CustomerBranch, CustomerService } from '../types/appointment.types'
+import { OperationalAppointmentsPage } from './OperationalAppointmentsPage'
 
 const today = new Date().toISOString().slice(0, 10)
 const formatDate = (value: string) => new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 
 export function AppointmentsPage() {
+  const { user } = useAuth()
+  return user?.role === 'customer' ? <CustomerAppointmentsPage /> : <OperationalAppointmentsPage />
+}
+
+function CustomerAppointmentsPage() {
   const { showToast } = useToast()
   const { user } = useAuth()
   const [history, setHistory] = useState(false)

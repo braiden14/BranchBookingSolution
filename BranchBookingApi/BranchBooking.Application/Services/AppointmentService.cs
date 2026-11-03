@@ -36,6 +36,32 @@ public sealed class AppointmentService(IAppointmentRepository repository) : IApp
         (await repository.GetCustomerAppointmentsAsync(customerId, history, cancellationToken))
         .Select(appointment => new AppointmentDto(appointment.AppointmentId, appointment.BranchId, appointment.BranchName, appointment.ServiceId, appointment.ServiceName, appointment.StartAt, appointment.EndAt, appointment.Status)).ToArray();
 
+    public async Task<PagedOperationalAppointmentDto> GetOperationalAppointmentsAsync(long? branchId, bool history, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        if (branchId is <= 0) throw new DomainValidationException("Branch ID must be greater than zero.");
+        pageNumber = Math.Max(pageNumber, 1);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        var records = (await repository.GetOperationalAppointmentsAsync(branchId, history, pageNumber, pageSize, cancellationToken)).ToArray();
+        var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+        return new PagedOperationalAppointmentDto(
+            records.Select(appointment => new OperationalAppointmentDto(
+                appointment.AppointmentId,
+                appointment.CustomerId,
+                appointment.CustomerName,
+                appointment.CustomerEmail,
+                appointment.BranchId,
+                appointment.BranchName,
+                appointment.ServiceId,
+                appointment.ServiceName,
+                appointment.StartAt,
+                appointment.EndAt,
+                appointment.Status)).ToArray(),
+            pageNumber,
+            pageSize,
+            totalCount,
+            totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
+    }
+
     public async Task<long> CreateAsync(long customerId, CreateAppointmentRequest request, CancellationToken cancellationToken = default)
     {
         ValidateId(customerId, "Customer ID");

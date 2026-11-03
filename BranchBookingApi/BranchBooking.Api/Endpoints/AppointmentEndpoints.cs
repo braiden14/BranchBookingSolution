@@ -45,6 +45,36 @@ public static class AppointmentEndpoints
             await service.RescheduleAsync(customerId.Value, appointmentId, request, cancellationToken);
             return Results.NoContent();
         });
+
+        var operationalGroup = endpoints.MapGroup("/api/appointments")
+            .WithTags("Operational appointments")
+            .RequireAuthorization("StaffOrAdmin");
+        operationalGroup.MapGet("/", async (
+            bool history,
+            int pageNumber,
+            int pageSize,
+            ClaimsPrincipal principal,
+            IAppointmentService service,
+            IBranchAccessService branchAccessService,
+            CancellationToken cancellationToken) =>
+        {
+            var userId = GetUserId(principal);
+            if (userId is null) return Results.Unauthorized();
+
+            long? branchId = null;
+            if (principal.IsInRole("Staff"))
+            {
+                branchId = await branchAccessService.GetStaffBranchIdAsync(userId.Value, cancellationToken);
+                if (branchId is null) return Results.Forbid();
+            }
+
+            return Results.Ok(await service.GetOperationalAppointmentsAsync(
+                principal.IsInRole("Admin") ? null : branchId,
+                history,
+                pageNumber,
+                pageSize,
+                cancellationToken));
+        });
         return endpoints;
     }
 
