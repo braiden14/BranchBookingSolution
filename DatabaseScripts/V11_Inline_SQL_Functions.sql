@@ -1,6 +1,6 @@
 -- V11 - Replace application inline SQL with database functions
 
-CREATE OR REPLACE FUNCTION public.get_auth_user_by_email(p_email CITEXT)
+CREATE OR REPLACE FUNCTION public.get_auth_user_by_email(p_email TEXT)
 RETURNS TABLE (
 	id BIGINT,
 	email CITEXT,

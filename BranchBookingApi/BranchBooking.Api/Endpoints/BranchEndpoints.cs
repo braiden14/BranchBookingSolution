@@ -29,7 +29,7 @@ namespace BranchBooking.Api.Endpoints
                 if (!long.TryParse(subject, out var userId) || !await branchAccessService.CanReadBranchAsync(
                         userId,
                         principal.IsInRole("Admin"),
-                        principal.IsInRole("Staff"),
+                        principal.IsInRole("Staff") || principal.IsInRole("BranchManager"),
                         branchId,
                         cancellationToken)) return Results.Forbid();
 

@@ -29,15 +29,18 @@ public static class BranchConfigurationEndpoints
             [FromRoute] long branchId,
             UpsertBranchServiceRequest request,
             IBranchConfigurationService configurationService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!await CanManageBranchAsync(principal, branchId, branchAccessService, cancellationToken)) return Results.Forbid();
             var branchServiceId = await configurationService.UpsertBranchServiceAsync(
                 branchId,
                 request,
             cancellationToken);
 
             return Results.Ok(new { branchServiceId });
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         endpoints.MapGet("/api/offered-services", async (
             IBranchConfigurationService configurationService,
@@ -74,23 +77,29 @@ public static class BranchConfigurationEndpoints
             [FromRoute] long branchId,
             CreateDateOverrideRequest request,
             IBranchConfigurationService configurationService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!await CanManageBranchAsync(principal, branchId, branchAccessService, cancellationToken)) return Results.Forbid();
             var overrideId = await configurationService.CreateDateOverrideAsync(
                 branchId,
                 request,
                 cancellationToken);
 
             return Results.Created($"/api/branches/{branchId}/date-overrides/{overrideId}", new { overrideId });
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         dateOverridesGroup.MapPut("/{overrideId:long}", async (
             [FromRoute] long branchId,
             [FromRoute] long overrideId,
             UpdateDateOverrideRequest request,
             IBranchConfigurationService configurationService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!await CanManageBranchAsync(principal, branchId, branchAccessService, cancellationToken)) return Results.Forbid();
             var updated = await configurationService.UpdateDateOverrideAsync(
                 branchId,
                 overrideId,
@@ -98,21 +107,24 @@ public static class BranchConfigurationEndpoints
                 cancellationToken);
 
             return updated ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         dateOverridesGroup.MapDelete("/{overrideId:long}", async (
             [FromRoute] long branchId,
             [FromRoute] long overrideId,
             IBranchConfigurationService configurationService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!await CanManageBranchAsync(principal, branchId, branchAccessService, cancellationToken)) return Results.Forbid();
             var deleted = await configurationService.DeleteDateOverrideAsync(
                 branchId,
                 overrideId,
                 cancellationToken);
 
             return deleted ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         var capacityOverridesGroup = endpoints.MapGroup("/api/branches/{branchId:long}/capacity-overrides")
             .WithTags("Branch capacity overrides")
@@ -141,29 +153,35 @@ public static class BranchConfigurationEndpoints
             [FromRoute] long branchId,
             UpsertCapacityOverrideRequest request,
             IBranchConfigurationService configurationService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!await CanManageBranchAsync(principal, branchId, branchAccessService, cancellationToken)) return Results.Forbid();
             var overrideId = await configurationService.UpsertCapacityOverrideAsync(
                 branchId,
                 request,
                 cancellationToken);
 
             return Results.Ok(new { overrideId });
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         capacityOverridesGroup.MapDelete("/{capacityOverrideId:long}", async (
             [FromRoute] long branchId,
             [FromRoute] long capacityOverrideId,
             IBranchConfigurationService configurationService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!await CanManageBranchAsync(principal, branchId, branchAccessService, cancellationToken)) return Results.Forbid();
             var deleted = await configurationService.DeleteCapacityOverrideAsync(
                 branchId,
                 capacityOverrideId,
                 cancellationToken);
 
             return deleted ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         return endpoints;
     }
@@ -179,8 +197,19 @@ public static class BranchConfigurationEndpoints
             await branchAccessService.CanReadBranchAsync(
                 userId,
                 principal.IsInRole("Admin"),
-                principal.IsInRole("Staff"),
+                principal.IsInRole("Staff") || principal.IsInRole("BranchManager"),
                 branchId,
                 cancellationToken);
+    }
+
+    private static async Task<bool> CanManageBranchAsync(
+        ClaimsPrincipal principal,
+        long branchId,
+        IBranchAccessService branchAccessService,
+        CancellationToken cancellationToken)
+    {
+        if (principal.IsInRole("Admin")) return true;
+        if (!principal.IsInRole("BranchManager")) return false;
+        return await CanReadBranchAsync(principal, branchId, branchAccessService, cancellationToken);
     }
 }

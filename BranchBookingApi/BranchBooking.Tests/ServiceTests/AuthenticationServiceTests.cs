@@ -1,4 +1,5 @@
 using BranchBooking.Application.Interfaces.Repositories;
+using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Authentication;
 using BranchBooking.Core.Models.Authentication;
@@ -24,6 +25,38 @@ public sealed class AuthenticationServiceTests
         _passwords = Substitute.For<IPasswordService>();
         _tokens = Substitute.For<ITokenService>();
         _service = new AuthenticationService(_repository, _passwords, _tokens, TimeProvider.System);
+    }
+
+    [Test]
+    public async Task GetStaffAsync_ClampsPagingAndReturnsRepositoryResult()
+    {
+        var expected = new PagedStaffDto([], 1, 100, 0, 0);
+        _repository.GetStaffAsync(1, 100, Arg.Any<CancellationToken>()).Returns(expected);
+
+        var result = await _service.GetStaffAsync(0, 500);
+
+        Assert.That(result, Is.SameAs(expected));
+        await _repository.Received(1).GetStaffAsync(1, 100, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task UpdateStaffStatusAsync_WhenDeactivatingStaff_UpdatesStatusAndRevokesSessions()
+    {
+        _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
+
+        await _service.UpdateStaffStatusAsync(5, UserStatus.Disabled);
+
+        await _repository.Received(1).UpdateStaffStatusAsync(5, UserStatus.Disabled, Arg.Any<CancellationToken>());
+        await _repository.Received(1).RevokeUserSessionsAsync(5, "Staff account deactivated", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void UpdateStaffStatusAsync_WhenManagingCustomer_RejectsRequest()
+    {
+        _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser());
+
+        Assert.ThrowsAsync<DomainValidationException>(async () => await _service.UpdateStaffStatusAsync(5, UserStatus.Disabled));
+        _repository.DidNotReceive().UpdateStaffStatusAsync(Arg.Any<long>(), Arg.Any<UserStatus>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -156,7 +189,7 @@ public sealed class AuthenticationServiceTests
     [Test]
     public async Task AcceptStaffInvitationAsync_WhenValid_HashesPasswordAndAcceptsInvitation()
     {
-        var invitation = new StaffInvitationRecord(8, 5, "token-hash", DateTimeOffset.UtcNow.AddDays(1), null);
+        var invitation = new StaffInvitationRecord(8, 5, "token-hash", DateTime.UtcNow.AddDays(1), null);
         _tokens.HashRefreshToken("invite").Returns("token-hash");
         _passwords.Hash("password1").Returns("password-hash");
         _repository.GetStaffInvitationAsync("token-hash", Arg.Any<CancellationToken>()).Returns(invitation);
@@ -164,6 +197,42 @@ public sealed class AuthenticationServiceTests
         await _service.AcceptStaffInvitationAsync(new AcceptStaffInvitationRequest("invite", "password1"));
 
         await _repository.Received(1).AcceptStaffInvitationAsync(8, 5, "password-hash", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InviteStaffAsync_WhenInvitingAdmin_AllowsMissingBranchAndNormalizesRole()
+    {
+        _tokens.CreateRefreshToken().Returns("invite-token");
+        _tokens.HashRefreshToken("invite-token").Returns("invite-hash");
+
+        var result = await _service.InviteStaffAsync(9, new InviteStaffRequest("admin@example.com", "Ada", "Admin", null, " Admin ", null));
+
+        Assert.That(result, Is.EqualTo("invite-token"));
+        await _repository.Received(1).CreateStaffInvitationAsync(
+            9,
+            Arg.Is<InviteStaffRequest>(request => request.RoleCode == "Admin" && request.BranchId == null),
+            "admin@example.com",
+            "invite-hash",
+            Arg.Any<DateTimeOffset>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void InviteStaffAsync_WhenNonAdminHasNoBranch_RejectsRequest()
+    {
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () =>
+            await _service.InviteStaffAsync(9, new InviteStaffRequest("staff@example.com", "Sam", "Staff", null, "Staff", null)));
+
+        Assert.That(exception!.Message, Is.EqualTo("A valid branch is required for Staff and BranchManager invitations."));
+    }
+
+    [Test]
+    public void InviteStaffAsync_WhenRoleIsUnsupported_RejectsRequest()
+    {
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () =>
+            await _service.InviteStaffAsync(9, new InviteStaffRequest("root@example.com", "Root", "User", null, "SuperUser", null)));
+
+        Assert.That(exception!.Message, Is.EqualTo("Invitations may only use the Admin, Staff, or BranchManager roles."));
     }
 
     private static AuthUserRecord CreateUser() =>

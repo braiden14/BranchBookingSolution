@@ -17,11 +17,14 @@ public static class OperationalScheduleEndpoints
             [FromRoute] long branchId,
             CreateOperationalScheduleRequest request,
             IOperationalScheduleService scheduleService,
+            IBranchAccessService branchAccessService,
+            ClaimsPrincipal principal,
             CancellationToken cancellationToken) =>
         {
+            if (!principal.IsInRole("Admin") && (!principal.IsInRole("BranchManager") || !long.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub"), out var userId) || !await branchAccessService.CanReadBranchAsync(userId, false, true, branchId, cancellationToken))) return Results.Forbid();
             var scheduleId = await scheduleService.CreateAsync(branchId, request, cancellationToken);
             return Results.Created($"/api/branches/{branchId}/operational-schedules/{scheduleId}", new { scheduleId });
-        }).RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("StaffOrAdmin");
 
         group.MapGet("/", async (
             [FromRoute] long branchId,
@@ -35,7 +38,7 @@ public static class OperationalScheduleEndpoints
             if (!long.TryParse(subject, out var userId) || !await branchAccessService.CanReadBranchAsync(
                     userId,
                     principal.IsInRole("Admin"),
-                    principal.IsInRole("Staff"),
+                    principal.IsInRole("Staff") || principal.IsInRole("BranchManager"),
                     branchId,
                     cancellationToken)) return Results.Forbid();
 

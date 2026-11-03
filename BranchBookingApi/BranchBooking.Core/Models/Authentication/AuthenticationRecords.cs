@@ -14,7 +14,8 @@ public sealed record AuthUserRecord(
     int FailedLoginCount,
     DateTimeOffset? LockedUntilUtc,
     int AuthorizationVersion,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    long? AssignedBranchId = null);
 
 public sealed record RefreshSessionRecord(
     long Id,
@@ -29,5 +30,19 @@ public sealed record StaffInvitationRecord(
     long Id,
     long UserId,
     string TokenHash,
-    DateTimeOffset ExpiresAtUtc,
-    DateTimeOffset? AcceptedAtUtc);
+    DateTime ExpiresAtUtc,
+    DateTime? AcceptedAtUtc);
+
+public sealed record StaffRecord(
+    long UserId,
+    string Email,
+    string FirstName,
+    string LastName,
+    string? PhoneNumber,
+    UserStatus Status,
+    IReadOnlyList<string> Roles,
+    long? BranchId,
+    string? BranchName,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? LastLoginAtUtc,
+    DateTimeOffset? InvitationExpiresAtUtc);

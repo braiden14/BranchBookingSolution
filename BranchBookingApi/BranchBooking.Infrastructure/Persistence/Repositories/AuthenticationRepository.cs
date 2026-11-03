@@ -1,4 +1,5 @@
 using BranchBooking.Application.Interfaces.Repositories;
+using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Models.Authentication;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Models.Authentication;
@@ -9,6 +10,35 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories;
 
 public sealed class AuthenticationRepository(DbConnectionFactory connectionFactory) : IAuthenticationRepository
 {
+    public async Task<PagedStaffDto> GetStaffAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        var rows = (await connection.QueryAsync<StaffRow>(new CommandDefinition(
+            "SELECT * FROM public.get_staff_directory(@PageNumber, @PageSize)",
+            new { PageNumber = pageNumber, PageSize = pageSize }, cancellationToken: cancellationToken))).ToArray();
+        var totalCount = rows.FirstOrDefault()?.total_count ?? 0;
+        var items = rows.Select(row => new StaffDto(row.user_id, row.email, row.first_name, row.last_name, row.phone_number,
+            (UserStatus)row.status, row.roles.Cast<string>().ToArray(), row.branch_id, row.branch_name, row.created_at_utc,
+            row.last_login_at_utc, row.invitation_expires_at_utc)).ToArray();
+        return new PagedStaffDto(items, pageNumber, pageSize, totalCount, (int)Math.Ceiling(totalCount / (double)pageSize));
+    }
+
+    public async Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            "SELECT public.update_staff_status(@UserId, @Status)",
+            new { UserId = userId, Status = (short)status }, cancellationToken: cancellationToken));
+    }
+
+    public async Task RevokeUserSessionsAsync(long userId, string reason, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            "SELECT public.revoke_user_sessions(@UserId, @Reason)",
+            new { UserId = userId, Reason = reason }, cancellationToken: cancellationToken));
+    }
+
     public async Task<AuthUserRecord?> GetUserByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
@@ -58,7 +88,7 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         var userId = await connection.ExecuteScalarAsync<long>(new CommandDefinition(
-            "SELECT public.create_staff_invitation(@Email, @FirstName, @LastName, @PhoneNumber, @BranchId, @AssignedByUserId, @RoleCode, @TokenHash, @ExpiresAtUtc)",
+            "SELECT public.create_staff_invitation(CAST(@Email AS CITEXT), @FirstName, @LastName, @PhoneNumber, @BranchId, @AssignedByUserId, @RoleCode, @TokenHash, @ExpiresAtUtc)",
             new
             {
                 Email = normalizedEmail,
@@ -160,7 +190,7 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
             ? null
             : new AuthUserRecord(row.id, row.email, row.password_hash, row.first_name, row.last_name, row.phone_number,
                 (UserStatus)row.status, row.email_confirmed, row.failed_login_count, row.locked_until_utc,
-                row.authorization_version, row.roles.Cast<string>().ToArray());
+                row.authorization_version, row.roles.Cast<string>().ToArray(), row.assigned_branch_id);
     }
 
     private sealed record AuthUser(
@@ -175,5 +205,21 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         int failed_login_count,
         DateTime? locked_until_utc,
         int authorization_version,
-        Array roles);
+        Array roles,
+        long? assigned_branch_id);
+
+    private sealed record StaffRow(
+        long user_id,
+        string email,
+        string first_name,
+        string last_name,
+        string? phone_number,
+        short status,
+        Array roles,
+        long? branch_id,
+        string? branch_name,
+        DateTime created_at_utc,
+        DateTime? last_login_at_utc,
+        DateTime? invitation_expires_at_utc,
+        long total_count);
 }

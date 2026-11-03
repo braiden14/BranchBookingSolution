@@ -62,11 +62,13 @@ public static class AppointmentEndpoints
             if (userId is null) return Results.Unauthorized();
 
             long? branchId = null;
-            if (principal.IsInRole("Staff"))
+            if (!principal.IsInRole("Admin"))
             {
                 branchId = await branchAccessService.GetStaffBranchIdAsync(userId.Value, cancellationToken);
                 if (branchId is null) return Results.Forbid();
             }
+
+            if (principal.IsInRole("Staff") && history) return Results.Forbid();
 
             return Results.Ok(await service.GetOperationalAppointmentsAsync(
                 principal.IsInRole("Admin") ? null : branchId,

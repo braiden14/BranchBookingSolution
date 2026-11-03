@@ -1,6 +1,7 @@
 using BranchBooking.Application.Interfaces.Repositories;
 using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Authentication;
+using BranchBooking.Application.DTOs;
 using BranchBooking.Core.Enums;
 using BranchBooking.Core.Exceptions;
 using BranchBooking.Core.Models.Authentication;
@@ -15,6 +16,34 @@ public sealed class AuthenticationService(
 {
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
     private const int MaximumFailedLogins = 5;
+
+    public async Task<PagedStaffDto> GetStaffAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        pageNumber = Math.Max(1, pageNumber);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        return await authenticationRepository.GetStaffAsync(pageNumber, pageSize, cancellationToken);
+    }
+
+    public async Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0 || status is not (UserStatus.Active or UserStatus.Disabled))
+        {
+            throw new DomainValidationException("A valid staff member and active or disabled status are required.");
+        }
+
+        var user = await authenticationRepository.GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new DomainValidationException("The staff member could not be found.");
+        if (!user.Roles.Any(role => role.Equals("Admin", StringComparison.OrdinalIgnoreCase) || role.Equals("Staff", StringComparison.OrdinalIgnoreCase) || role.Equals("BranchManager", StringComparison.OrdinalIgnoreCase) || role.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new DomainValidationException("Only Admin, Staff, and BranchManager accounts can be managed here.");
+        }
+
+        await authenticationRepository.UpdateStaffStatusAsync(userId, status, cancellationToken);
+        if (status == UserStatus.Disabled)
+        {
+            await authenticationRepository.RevokeUserSessionsAsync(userId, "Staff account deactivated", cancellationToken);
+        }
+    }
 
     public async Task<AuthenticationResult> RegisterCustomerAsync(RegisterCustomerRequest request, CancellationToken cancellationToken = default)
     {
@@ -124,10 +153,26 @@ public sealed class AuthenticationService(
 
     public async Task<string> InviteStaffAsync(long assignedByUserId, InviteStaffRequest request, CancellationToken cancellationToken = default)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName) || string.IsNullOrWhiteSpace(request.RoleCode) || request.BranchId <= 0)
+        if (request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName) || string.IsNullOrWhiteSpace(request.RoleCode))
         {
             throw new DomainValidationException("All staff invitation details and a valid branch are required.");
         }
+
+        var roleCode = request.RoleCode.Trim();
+        var normalizedRoleCode = roleCode.Replace(" ", string.Empty, StringComparison.Ordinal);
+        if (!normalizedRoleCode.Equals("Staff", StringComparison.OrdinalIgnoreCase) &&
+            !normalizedRoleCode.Equals("BranchManager", StringComparison.OrdinalIgnoreCase) &&
+            !normalizedRoleCode.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainValidationException("Invitations may only use the Admin, Staff, or BranchManager roles.");
+        }
+
+        if (!normalizedRoleCode.Equals("Admin", StringComparison.OrdinalIgnoreCase) && (request.BranchId is null or <= 0))
+        {
+            throw new DomainValidationException("A valid branch is required for Staff and BranchManager invitations.");
+        }
+
+        var normalizedRequest = request with { RoleCode = normalizedRoleCode, BranchId = normalizedRoleCode.Equals("Admin", StringComparison.OrdinalIgnoreCase) ? null : request.BranchId };
 
         var email = NormalizeEmail(request.Email);
         if (await authenticationRepository.GetUserByEmailAsync(email, cancellationToken) is not null)
@@ -138,7 +183,7 @@ public sealed class AuthenticationService(
         var token = tokenService.CreateRefreshToken();
         await authenticationRepository.CreateStaffInvitationAsync(
             assignedByUserId,
-            request,
+            normalizedRequest,
             email,
             tokenService.HashRefreshToken(token),
             timeProvider.GetUtcNow().AddDays(2),
@@ -191,7 +236,8 @@ public sealed class AuthenticationService(
         user.FirstName,
         user.LastName,
         user.PhoneNumber,
-        user.Roles);
+        user.Roles,
+        user.AssignedBranchId);
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 

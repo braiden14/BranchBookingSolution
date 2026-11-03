@@ -54,7 +54,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("StaffOrAdmin", policy => policy.RequireRole("Admin", "Staff"));
+    options.AddPolicy("StaffOrAdmin", policy => policy.RequireRole("Admin", "Staff", "BranchManager"));
     options.AddPolicy("CustomerOnly", policy => policy.RequireRole("Customer"));
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

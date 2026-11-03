@@ -1,3 +1,5 @@
+using BranchBooking.Core.Enums;
+
 namespace BranchBooking.Application.Models.Authentication;
 
 public sealed record LoginRequest(string Email, string Password);
@@ -15,11 +17,13 @@ public sealed record InviteStaffRequest(
     string LastName,
     string? PhoneNumber,
     string RoleCode,
-    long BranchId);
+    long? BranchId);
 
 public sealed record AcceptStaffInvitationRequest(
     string Token,
     string Password);
+
+public sealed record UpdateStaffStatusRequest(UserStatus Status);
 
 public sealed record AuthUserDto(
     long Id,
@@ -27,7 +31,8 @@ public sealed record AuthUserDto(
     string FirstName,
     string LastName,
     string? PhoneNumber,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    long? AssignedBranchId);
 
 public sealed record AuthenticationResult(
     AuthUserDto User,

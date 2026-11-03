@@ -1,10 +1,18 @@
 using BranchBooking.Application.Models.Authentication;
 using BranchBooking.Core.Models.Authentication;
+using BranchBooking.Application.DTOs;
+using BranchBooking.Core.Enums;
 
 namespace BranchBooking.Application.Interfaces.Repositories;
 
 public interface IAuthenticationRepository
 {
+    Task<PagedStaffDto> GetStaffAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default);
+
+    Task RevokeUserSessionsAsync(long userId, string reason, CancellationToken cancellationToken = default);
+
     Task<AuthUserRecord?> GetUserByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
 
     Task<AuthUserRecord?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default);
