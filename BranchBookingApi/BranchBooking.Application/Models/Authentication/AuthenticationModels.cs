@@ -55,8 +55,8 @@ public sealed record RefreshSessionRecord(
     long UserId,
     Guid FamilyId,
     string RefreshTokenHash,
-    DateTimeOffset ExpiresAtUtc,
-    DateTimeOffset? RevokedAtUtc,
+    DateTime ExpiresAtUtc,
+    DateTime? RevokedAtUtc,
     long? ReplacedBySessionId);
 
 public sealed record StaffInvitationRecord(

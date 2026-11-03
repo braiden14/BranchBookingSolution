@@ -2,10 +2,12 @@ import { apiClient } from '../../../lib/api-client'
 import type { CreateOperationalScheduleRequest, OperationalSchedule } from '../types/operational-schedule.types'
 
 export async function getOperationalSchedule(branchId: number): Promise<OperationalSchedule | null> {
-  const response = await fetch(`/api/branches/${branchId}/operational-schedules`)
-  if (response.status === 404) return null
-  if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
-  return response.json() as Promise<OperationalSchedule>
+  try {
+    return await apiClient<OperationalSchedule>(`/api/branches/${branchId}/operational-schedules`)
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Request failed with status 404') return null
+    throw error
+  }
 }
 
 export async function createOperationalSchedule(branchId: number, request: CreateOperationalScheduleRequest): Promise<number> {

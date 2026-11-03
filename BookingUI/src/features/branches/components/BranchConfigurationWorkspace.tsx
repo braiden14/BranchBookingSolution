@@ -5,7 +5,7 @@ import { LoadingOverlay } from '../../../components/ui/LoadingOverlay'
 import { useToast } from '../../../components/ui/ToastProvider'
 import { useBranchConfiguration } from '../hooks/useBranchConfiguration'
 import { useOperationalSchedule } from '../hooks/useOperationalSchedule'
-import { activateBranch, updateBranch } from '../services/branches.service'
+import { activateBranch, deactivateBranch, updateBranch } from '../services/branches.service'
 import { BranchServicesConfiguration } from './BranchServicesConfiguration'
 import { CapacityOverridesConfiguration } from './CapacityOverridesConfiguration'
 import { DateOverridesConfiguration } from './DateOverridesConfiguration'
@@ -44,7 +44,7 @@ export function BranchConfigurationWorkspace() {
   const [isBranchSaving, setIsBranchSaving] = useState(false)
   const [branchSaveError, setBranchSaveError] = useState<string | null>(null)
   const [isActivating, setIsActivating] = useState(false)
-  const [isActivated, setIsActivated] = useState(false)
+  const [isActivated, setIsActivated] = useState(branch?.status === 'Active')
   const [activationError, setActivationError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -95,14 +95,21 @@ export function BranchConfigurationWorkspace() {
   }
 
   const activate = async () => {
+    if (isActivated && !window.confirm('Deactivate this branch? This will stop accepting bookings.')) return
     setIsActivating(true)
     setActivationError(null)
     try {
-      await activateBranch(branchId)
-      setIsActivated(true)
-      showToast('Branch activated and accepting bookings.')
+      if (isActivated) {
+        await deactivateBranch(branchId)
+        setIsActivated(false)
+        showToast('Branch deactivated and bookings disabled.')
+      } else {
+        await activateBranch(branchId)
+        setIsActivated(true)
+        showToast('Branch activated and accepting bookings.')
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'The branch could not be activated.'
+      const message = error instanceof Error ? error.message : `The branch could not be ${isActivated ? 'deactivated' : 'activated'}.`
       setActivationError(message)
       showToast(message, 'error')
     } finally {
@@ -115,7 +122,7 @@ export function BranchConfigurationWorkspace() {
 
   return <div className="configuration-page">
     <button className="back-link" onClick={() => navigate('/branches')}><ArrowLeft size={16} /> Back to branches</button>
-    <div className="page-heading page-heading--configuration"><div><span className="eyebrow">Branch setup / configuration</span><h1>Configure your branch</h1><p className="page-heading__description">Set up services, operating hours, and booking availability.</p></div><button type="button" className="button button--primary activation-button" disabled={isActivating || isActivated} onClick={() => void activate()}>{isActivating ? 'Activating...' : isActivated ? 'Active & accepting bookings' : 'Activate & accept bookings'}</button></div>
+      <div className="page-heading page-heading--configuration"><div><span className="eyebrow">Branch setup / configuration</span><h1>Configure your branch</h1><p className="page-heading__description">Set up services, operating hours, and booking availability.</p></div><button type="button" className="button button--primary activation-button" disabled={isActivating} onClick={() => void activate()}>{isActivating ? (isActivated ? 'Deactivating...' : 'Activating...') : isActivated ? 'Deactivate branch' : 'Activate & accept bookings'}</button></div>
     {activationError && <p className="form-error activation-error">{activationError}</p>}
 
     <div className="configuration-tabs" role="tablist" aria-label="Branch configuration sections">
