@@ -55,6 +55,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("StaffOrAdmin", policy => policy.RequireRole("Admin", "Staff"));
+    options.AddPolicy("CustomerOnly", policy => policy.RequireRole("Customer"));
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
@@ -82,6 +83,7 @@ app.MapBranchEndpoints();
 app.MapAuthenticationEndpoints();
 app.MapOperationalScheduleEndpoints();
 app.MapBranchConfigurationEndpoints();
+app.MapAppointmentEndpoints();
 
 
 app.Run();

@@ -7,6 +7,7 @@ import { BranchesPage } from '../features/branches/components/BranchesPage'
 import { BranchConfigurationWorkspace } from '../features/branches/components/BranchConfigurationWorkspace'
 import { OverviewPage } from '../features/overview/components/OverviewPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
+import { AppointmentsPage } from '../features/appointments/components/AppointmentsPage'
 
 function ComingSoon({ title }: { title: string }) {
   return <section className="empty-state"><span className="empty-state__icon">✦</span><h1>{title}</h1><p className="muted">This workspace is ready for the next feature.</p></section>
@@ -21,7 +22,7 @@ export default function App() {
         <Route index element={<OverviewPage />} />
         <Route path="branches" element={<BranchesPage />} />
         <Route path="branches/:branchId/configuration" element={<BranchConfigurationWorkspace />} />
-        <Route path="appointments" element={<ComingSoon title="Appointments" />} />
+         <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="customers" element={<ComingSoon title="Customers" />} />
         <Route path="forbidden" element={<ComingSoon title="Access restricted" />} />
       </Route>
