@@ -1,8 +1,10 @@
 import { apiClient } from '../../../lib/api-client'
 import type { Branch, CreateBranchRequest, PagedBranches, UpdateBranchRequest } from '../types/branch.types'
 
-export async function getBranches(pageNumber = 1, pageSize = 20): Promise<PagedBranches> {
-  return await apiClient<PagedBranches>(`/api/branches?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+export async function getBranches(pageNumber = 1, pageSize = 5, searchTerm = ''): Promise<PagedBranches> {
+  const query = new URLSearchParams({ pageNumber: String(pageNumber), pageSize: String(pageSize) })
+  if (searchTerm.trim()) query.set('searchTerm', searchTerm.trim())
+  return await apiClient<PagedBranches>(`/api/branches?${query.toString()}`)
 }
 
 export async function createBranch(request: CreateBranchRequest): Promise<number> {

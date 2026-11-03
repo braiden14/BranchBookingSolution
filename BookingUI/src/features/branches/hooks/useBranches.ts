@@ -5,7 +5,8 @@ import type { Branch, CreateBranchRequest, UpdateBranchRequest } from '../types/
 export function useBranches() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [pageNumber, setPageNumber] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(5)
+  const [searchTerm, setSearchTerm] = useState('')
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -14,7 +15,7 @@ export function useBranches() {
   const refresh = useCallback(async () => {
     setIsLoading(true)
     try {
-      const page = await getBranches(pageNumber, pageSize)
+      const page = await getBranches(pageNumber, pageSize, searchTerm)
       setBranches(page.items)
       setTotalCount(page.totalCount)
       setTotalPages(page.totalPages)
@@ -24,7 +25,7 @@ export function useBranches() {
     } finally {
       setIsLoading(false)
     }
-  }, [pageNumber, pageSize])
+  }, [pageNumber, pageSize, searchTerm])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -48,5 +49,15 @@ export function useBranches() {
     setPageNumber(Math.min(Math.max(nextPage, 1), Math.max(totalPages, 1)))
   }, [totalPages])
 
-  return { branches, pageNumber, pageSize, totalCount, totalPages, isLoading, error, refresh, addBranch, editBranch, disableBranch, goToPage }
+  const updatePageSize = useCallback((nextPageSize: number) => {
+    setPageSize(nextPageSize)
+    setPageNumber(1)
+  }, [])
+
+  const updateSearchTerm = useCallback((nextSearchTerm: string) => {
+    setSearchTerm(nextSearchTerm)
+    setPageNumber(1)
+  }, [])
+
+  return { branches, pageNumber, pageSize, searchTerm, totalCount, totalPages, isLoading, error, refresh, addBranch, editBranch, disableBranch, goToPage, updatePageSize, updateSearchTerm }
 }

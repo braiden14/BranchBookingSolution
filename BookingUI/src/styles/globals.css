@@ -177,3 +177,5 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 @media (max-width: 800px) { .sidebar:not(.sidebar--open) { visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 .invitation-link-content { display: grid; gap: 10px; }.invitation-link { width: 100%; min-height: 42px; padding: 9px 10px; color: #193553; background: #f7fafc; border: 1px solid #d9e3ed; border-radius: 6px; font-size: 12px; word-break: break-all; }.invitation-link:focus { border-color: #4b9bea; outline: 0; box-shadow: 0 0 0 3px #e7f2ff; }
+.branch-search { width: 260px; }
+@media (max-width: 760px) { .branch-search { width: auto; } }

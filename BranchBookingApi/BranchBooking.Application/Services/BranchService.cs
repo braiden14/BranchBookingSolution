@@ -39,12 +39,14 @@ namespace BranchBooking.Application.Services
         public async Task<PagedBranchDto> GetPageAsync(
             int pageNumber,
             int pageSize,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string? searchTerm = null)
         {
             pageNumber = Math.Max(pageNumber, 1);
             pageSize = Math.Clamp(pageSize, 1, 200);
+            searchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
 
-            var records = (await branchRepository.GetPageAsync(pageNumber, pageSize, cancellationToken)).ToArray();
+            var records = (await branchRepository.GetPageAsync(pageNumber, pageSize, cancellationToken, searchTerm)).ToArray();
             var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
             var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
 

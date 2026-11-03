@@ -12,9 +12,9 @@ namespace BranchBooking.Api.Endpoints
             var group = endpoints.MapGroup("/api/branches").WithTags("Branches");
 
             group.MapGet("/", async (IBranchService branchService, CancellationToken cancellationToken,
-                [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20) =>
+                [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5, [FromQuery] string? searchTerm = null) =>
             {
-                var branches = await branchService.GetPageAsync(pageNumber, pageSize, cancellationToken);
+                var branches = await branchService.GetPageAsync(pageNumber, pageSize, cancellationToken, searchTerm);
                 return Results.Ok(branches);
             }).RequireAuthorization("AdminOnly");
 

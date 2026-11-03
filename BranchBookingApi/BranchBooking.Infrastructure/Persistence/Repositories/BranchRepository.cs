@@ -72,7 +72,8 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
         public async Task<IEnumerable<BranchListItemRecord>> GetPageAsync(
             int pageNumber,
             int pageSize,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string? searchTerm = null)
         {
             await using var connection = connectionFactory.CreateConnection();
 
@@ -86,7 +87,8 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
                     new
                     {
                         PageNumber = pageNumber,
-                        PageSize = pageSize
+                        PageSize = pageSize,
+                        SearchTerm = searchTerm
                     },
                     commandType: CommandType.Text,
                     cancellationToken: cancellationToken));

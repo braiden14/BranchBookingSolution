@@ -143,6 +143,21 @@ namespace BranchBooking.Tests.ServiceTests
         }
 
         [Test]
+        public async Task GetPageAsync_TrimsSearchTermBeforeForwarding()
+        {
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = cancellationTokenSource.Token;
+            _branchRepository
+                .GetPageAsync(1, 5, cancellationToken, "Johannesburg")
+                .Returns(Array.Empty<BranchListItemRecord>());
+
+            var result = await _branchService.GetPageAsync(0, 5, cancellationToken, "  Johannesburg  ");
+
+            Assert.That(result.TotalCount, Is.EqualTo(0));
+            await _branchRepository.Received(1).GetPageAsync(1, 5, cancellationToken, "Johannesburg");
+        }
+
+        [Test]
         public async Task UpdateAsync_WhenRequestIsValid_ForwardsRequestToRepository()
         {
             // Given

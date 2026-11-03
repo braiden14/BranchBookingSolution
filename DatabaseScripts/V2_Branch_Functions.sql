@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION public.get_all_branches(
     p_page_number INT DEFAULT 1,
-    p_page_size   INT DEFAULT 20
+    p_page_size   INT DEFAULT 5,
+    p_search_term VARCHAR DEFAULT NULL
 )
 RETURNS TABLE (
     id               BIGINT,
@@ -31,10 +32,13 @@ AS $$
         b.created_at_utc,
         COUNT(*) OVER () AS total_count
     FROM public.branches b
+    WHERE NULLIF(BTRIM(p_search_term), '') IS NULL
+       OR CONCAT_WS(' ', b.code, b.name, b.address_line_1, b.city, b.province, b.postal_code)
+          ILIKE '%' || BTRIM(p_search_term) || '%'
     ORDER BY b.id
-    LIMIT  GREATEST(LEAST(COALESCE(p_page_size, 20), 200), 1)
+    LIMIT  GREATEST(LEAST(COALESCE(p_page_size, 5), 200), 1)
     OFFSET (GREATEST(COALESCE(p_page_number, 1), 1) - 1)
-           * GREATEST(LEAST(COALESCE(p_page_size, 20), 200), 1);
+           * GREATEST(LEAST(COALESCE(p_page_size, 5), 200), 1);
 $$;
 
 CREATE OR REPLACE FUNCTION public.create_branch(
