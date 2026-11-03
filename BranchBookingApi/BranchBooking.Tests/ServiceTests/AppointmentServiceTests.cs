@@ -39,6 +39,26 @@ public sealed class AppointmentServiceTests
     }
 
     [Test]
+    public async Task GetAvailableSlotsForWeekAsync_UsesOneRepositoryRequestAndGroupsByDate()
+    {
+        var from = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var to = from.AddDays(6);
+        _repository.GetAvailableSlotsForWeekAsync(42, 7, 3, from, to, null, Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                new WeeklyAvailableSlotRecord(from, from.ToDateTime(new TimeOnly(10, 0)), from.ToDateTime(new TimeOnly(10, 30))),
+                new WeeklyAvailableSlotRecord(from.AddDays(1), from.AddDays(1).ToDateTime(new TimeOnly(11, 0)), from.AddDays(1).ToDateTime(new TimeOnly(11, 30)))
+            });
+
+        var result = (await _service.GetAvailableSlotsForWeekAsync(42, 7, 3, from, to)).ToArray();
+
+        Assert.That(result, Has.Length.EqualTo(2));
+        Assert.That(result[0].Date, Is.EqualTo(from));
+        Assert.That(result[0].Slots, Has.Count.EqualTo(1));
+        await _repository.Received(1).GetAvailableSlotsForWeekAsync(42, 7, 3, from, to, null, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public void GetAvailableSlotsAsync_WhenCustomerIdIsInvalid_RejectsBeforeRepositoryCall()
     {
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));

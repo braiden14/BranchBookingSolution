@@ -346,6 +346,17 @@ AS $$
 	ORDER BY local_start;
 $$;
 
+CREATE OR REPLACE FUNCTION public.get_available_slots_week(p_customer_id BIGINT, p_branch_id BIGINT, p_service_id BIGINT, p_from_date DATE, p_to_date DATE, p_exclude_id BIGINT, p_now_sast TIMESTAMP)
+RETURNS TABLE (date DATE, start_at TIMESTAMP, end_at TIMESTAMP)
+LANGUAGE SQL
+AS $$
+	SELECT dates.date, slots.start_at, slots.end_at
+	FROM generate_series(p_from_date, p_to_date, interval '1 day') AS dates(date)
+	CROSS JOIN LATERAL public.get_available_slots(
+		p_customer_id, p_branch_id, p_service_id, dates.date::date, p_exclude_id, p_now_sast) AS slots
+	ORDER BY dates.date, slots.start_at;
+$$;
+
 CREATE OR REPLACE FUNCTION public.create_appointment(p_customer_id BIGINT, p_branch_id BIGINT, p_service_id BIGINT, p_start_at TIMESTAMP)
 RETURNS BIGINT
 LANGUAGE plpgsql

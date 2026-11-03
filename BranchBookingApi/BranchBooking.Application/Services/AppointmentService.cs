@@ -32,6 +32,20 @@ public sealed class AppointmentService(IAppointmentRepository repository) : IApp
             .Select(slot => new AvailableSlotDto(slot.StartAt, slot.EndAt)).ToArray();
     }
 
+    public async Task<IEnumerable<AvailableDayDto>> GetAvailableSlotsForWeekAsync(long customerId, long branchId, long serviceId, DateOnly fromDate, DateOnly toDate, long? excludingAppointmentId = null, CancellationToken cancellationToken = default)
+    {
+        ValidateId(customerId, "Customer ID");
+        ValidateId(branchId, "Branch ID");
+        ValidateId(serviceId, "Service ID");
+        if (toDate < fromDate || toDate.DayNumber - fromDate.DayNumber > 6)
+            throw new DomainValidationException("Availability must cover between one and seven days.");
+
+        var slots = await repository.GetAvailableSlotsForWeekAsync(customerId, branchId, serviceId, fromDate, toDate, excludingAppointmentId, cancellationToken);
+        return slots.GroupBy(slot => slot.Date)
+            .Select(day => new AvailableDayDto(day.Key, day.Select(slot => new AvailableSlotDto(slot.StartAt, slot.EndAt)).ToArray()))
+            .ToArray();
+    }
+
     public async Task<IEnumerable<AppointmentDto>> GetCustomerAppointmentsAsync(long customerId, bool history, CancellationToken cancellationToken = default) =>
         (await repository.GetCustomerAppointmentsAsync(customerId, history, cancellationToken))
         .Select(appointment => new AppointmentDto(appointment.AppointmentId, appointment.BranchId, appointment.BranchName, appointment.ServiceId, appointment.ServiceName, appointment.StartAt, appointment.EndAt, appointment.Status)).ToArray();

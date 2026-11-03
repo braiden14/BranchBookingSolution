@@ -14,6 +14,7 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
     private const string AppointmentsSql = "SELECT * FROM public.get_customer_appointments(@CustomerId, @History)";
     private const string OperationalAppointmentsSql = "SELECT * FROM public.get_operational_appointments(@BranchId, @History, @PageSize, @Offset)";
     private const string SlotsSql = "SELECT * FROM public.get_available_slots(@CustomerId, @BranchId, @ServiceId, @Date, @ExcludeId, @NowSast)";
+    private const string WeeklySlotsSql = "SELECT * FROM public.get_available_slots_week(@CustomerId, @BranchId, @ServiceId, @FromDate, @ToDate, @ExcludeId, @NowSast)";
 
     public async Task<IEnumerable<BookableBranchRecord>> GetBookableBranchesAsync(CancellationToken cancellationToken = default) => await QueryAsync<BookableBranchRecord>(BranchesSql, null, cancellationToken);
     public async Task<IEnumerable<BookableServiceRecord>> GetBookableServicesAsync(long branchId, CancellationToken cancellationToken = default) => await QueryAsync<BookableServiceRecord>(ServicesSql, new { BranchId = branchId }, cancellationToken);
@@ -24,6 +25,12 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
     {
         var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "South Africa Standard Time" : "Africa/Johannesburg")).DateTime;
         return await QueryAsync<AvailableSlotRecord>(SlotsSql, new { CustomerId = customerId, BranchId = branchId, ServiceId = serviceId, Date = date, ExcludeId = excludingAppointmentId, NowSast = now }, cancellationToken);
+    }
+
+    public async Task<IEnumerable<WeeklyAvailableSlotRecord>> GetAvailableSlotsForWeekAsync(long customerId, long branchId, long serviceId, DateOnly fromDate, DateOnly toDate, long? excludingAppointmentId = null, CancellationToken cancellationToken = default)
+    {
+        var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "South Africa Standard Time" : "Africa/Johannesburg")).DateTime;
+        return await QueryAsync<WeeklyAvailableSlotRecord>(WeeklySlotsSql, new { CustomerId = customerId, BranchId = branchId, ServiceId = serviceId, FromDate = fromDate, ToDate = toDate, ExcludeId = excludingAppointmentId, NowSast = now }, cancellationToken);
     }
 
     public async Task<long> CreateAsync(long customerId, long branchId, long serviceId, DateTime startAt, CancellationToken cancellationToken = default)

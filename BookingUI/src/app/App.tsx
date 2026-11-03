@@ -48,7 +48,9 @@ export default function App() {
         </Route>
         <Route path="branches" element={<ProtectedRoute roles={['admin']} />}><Route index element={<BranchesPage />} /></Route>
         <Route path="branches/:branchId/configuration" element={<ProtectedRoute roles={['admin', 'branch-manager']} />}><Route index element={<BranchConfigurationWorkspace />} /></Route>
-         <Route path="appointments" element={<AppointmentsPage />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
+          <Route path="appointments/book" element={<AppointmentsPage />} />
+          <Route path="appointments/:appointmentId/reschedule" element={<AppointmentsPage />} />
          <Route path="customers" element={<AdminOnly><CustomersPage /></AdminOnly>} />
          <Route path="staff" element={<AdminOnly><StaffPage /></AdminOnly>} />
         <Route path="forbidden" element={<ForbiddenPage />} />
