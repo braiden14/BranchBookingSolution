@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { AppLayout } from '../components/layout/AppLayout'
 import { LoginPage } from '../features/auth/components/LoginPage'
@@ -12,8 +12,15 @@ import { AppointmentsPage } from '../features/appointments/components/Appointmen
 import { CustomersPage } from '../features/customers/components/CustomersPage'
 import { useAuth } from '../features/auth/providers/AuthProvider'
 
-function ComingSoon({ title }: { title: string }) {
-  return <section className="empty-state"><span className="empty-state__icon">✦</span><h1>{title}</h1><p className="muted">This workspace is ready for the next feature.</p></section>
+function HomeRedirect() {
+  const { user } = useAuth()
+  return <Navigate to={user?.role === 'customer' ? '/appointments' : '/overview'} replace />
+}
+
+function ForbiddenPage() {
+  const { user } = useAuth()
+  const home = user?.role === 'customer' ? '/appointments' : '/overview'
+  return <section className="empty-state"><span className="empty-state__icon">!</span><h1>Access restricted</h1><p className="muted">You do not have permission to view this page.</p><Link className="button button--primary" to={home}>Return to your workspace</Link></section>
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -27,16 +34,20 @@ export default function App() {
     <Route path="/register" element={<RegisterPage />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
-        <Route index element={<OverviewPage />} />
+        <Route index element={<HomeRedirect />} />
+        <Route path="overview" element={<ProtectedRoute roles={['admin', 'branch-manager', 'staff']} />}>
+          <Route index element={<OverviewPage />} />
+        </Route>
         <Route element={<ProtectedRoute roles={['admin', 'branch-manager', 'staff']} />}>
           <Route path="branches" element={<BranchesPage />} />
           <Route path="branches/:branchId/configuration" element={<BranchConfigurationWorkspace />} />
         </Route>
          <Route path="appointments" element={<AppointmentsPage />} />
          <Route path="customers" element={<AdminOnly><CustomersPage /></AdminOnly>} />
-        <Route path="forbidden" element={<ComingSoon title="Access restricted" />} />
+        <Route path="forbidden" element={<ForbiddenPage />} />
+        <Route path="*" element={<HomeRedirect />} />
       </Route>
     </Route>
-    <Route path="*" element={<Navigate to="/branches" replace />} />
+    <Route path="*" element={<Navigate to="/login" replace />} />
   </Routes></BrowserRouter></AuthProvider>
 }

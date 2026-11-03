@@ -11,6 +11,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const message = (location.state as { message?: string } | null)?.message
 
   const submit = async (event: FormEvent) => {
@@ -39,11 +40,11 @@ export function LoginPage() {
         <h1>Welcome back</h1>
         <p className="muted">Sign in to manage your branches and appointments.</p>
         <form className="login-form" onSubmit={submit}>
-          <label>Email address<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.co.za" /></label>
-          <label>Password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" /></label>
-          {error && <p className="form-error">{error}</p>}
+          <label htmlFor="login-email">Email address<input id="login-email" required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.co.za" aria-invalid={Boolean(error)} aria-describedby={error ? 'login-error' : undefined} /></label>
+          <label htmlFor="login-password">Password<div className="password-input"><input id="login-password" required type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" aria-invalid={Boolean(error)} aria-describedby={error ? 'login-error' : undefined} /><button type="button" className="password-toggle" onClick={() => setShowPassword(value => !value)}>{showPassword ? 'Hide' : 'Show'}</button></div></label>
+          {error && <p id="login-error" className="form-error" role="alert">{error}</p>}
           {message && <p className="form-success">{message}</p>}
-          <button className="button button--primary button--full" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : <>Sign in <ArrowRight size={17} /></>}</button>
+          <button className="button button--primary button--full" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? 'Signing in…' : <>Sign in <ArrowRight size={17} /></>}</button>
         </form>
         <p className="secure-note"><LockKeyhole size={15} /> Secure access for your team</p>
         <p className="auth-switch">New to BranchBook? <Link to="/register">Create a customer account</Link></p>
