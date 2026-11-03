@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, ChevronDown, LayoutDashboard, LogOut, Menu, UsersRound, X } from 'lucide-react'
+import { Building2, CalendarDays, ChevronDown, LayoutDashboard, LogOut, Menu, UsersRound, UserRoundCog, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/providers/AuthProvider'
@@ -8,6 +8,7 @@ const navigation = [
   { label: 'Branches', icon: Building2, to: '/branches' },
   { label: 'Appointments', icon: CalendarDays, to: '/appointments' },
   { label: 'Customers', icon: UsersRound, to: '/customers' },
+  { label: 'Staff', icon: UserRoundCog, to: '/staff' },
 ]
 
 export function AppLayout() {
@@ -26,7 +27,9 @@ export function AppLayout() {
   const visibleNavigation = user?.role === 'customer'
     ? navigation.filter(({ to }) => to === '/appointments')
     : user?.role === 'staff' || user?.role === 'branch-manager'
-      ? navigation.filter(({ to }) => to !== '/customers')
+      ? navigation.filter(({ to }) => to !== '/customers' && to !== '/staff')
+    : user?.role === 'admin'
+      ? navigation
     : navigation
 
   return (

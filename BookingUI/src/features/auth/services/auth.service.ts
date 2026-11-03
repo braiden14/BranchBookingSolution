@@ -10,6 +10,12 @@ export const authService = {
     setAccessToken(authentication.accessToken)
     return authentication.user
   },
+  async acceptInvitation(token: string, password: string): Promise<void> {
+    await apiClient<void>('/api/auth/staff/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    })
+  },
   async currentUser(): Promise<AuthUserResponse> {
     return apiClient<AuthUserResponse>('/api/auth/me')
   },

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { AppLayout } from '../components/layout/AppLayout'
 import { LoginPage } from '../features/auth/components/LoginPage'
 import { RegisterPage } from '../features/auth/components/RegisterPage'
+import { AcceptInvitationPage } from '../features/auth/components/AcceptInvitationPage'
 import { AuthProvider } from '../features/auth/providers/AuthProvider'
 import { BranchesPage } from '../features/branches/components/BranchesPage'
 import { BranchConfigurationWorkspace } from '../features/branches/components/BranchConfigurationWorkspace'
@@ -11,6 +12,7 @@ import { ProtectedRoute } from './routes/ProtectedRoute'
 import { AppointmentsPage } from '../features/appointments/components/AppointmentsPage'
 import { CustomersPage } from '../features/customers/components/CustomersPage'
 import { useAuth } from '../features/auth/providers/AuthProvider'
+import { StaffPage } from '../features/staff/components/StaffPage'
 
 function HomeRedirect() {
   const { user } = useAuth()
@@ -32,6 +34,7 @@ export default function App() {
   return <AuthProvider><BrowserRouter><Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
+    <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
         <Route index element={<HomeRedirect />} />
@@ -44,6 +47,7 @@ export default function App() {
         </Route>
          <Route path="appointments" element={<AppointmentsPage />} />
          <Route path="customers" element={<AdminOnly><CustomersPage /></AdminOnly>} />
+         <Route path="staff" element={<AdminOnly><StaffPage /></AdminOnly>} />
         <Route path="forbidden" element={<ForbiddenPage />} />
         <Route path="*" element={<HomeRedirect />} />
       </Route>

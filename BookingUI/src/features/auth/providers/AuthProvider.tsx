@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 function toAuthUser(response: { id: number; email: string; firstName: string; lastName: string; roles: string[] }): AuthUser {
-  const roles = response.roles.map((role) => role.toLowerCase().replace('administrator', 'admin').replace('branchmanager', 'branch-manager')) as UserRole[]
+  const roles = response.roles.map((role) => role.toLowerCase().replace('administrator', 'admin').replace('branchmanager', 'branch-manager').replace('branch manager', 'branch-manager')) as UserRole[]
   return { id: response.id.toString(), name: `${response.firstName} ${response.lastName}`, email: response.email, role: roles[0] ?? 'staff', roles }
 }
 
