@@ -9,6 +9,7 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories;
 public sealed class BranchConfigurationRepository(DbConnectionFactory connectionFactory) : IBranchConfigurationRepository
 {
     private const string GetOfferedServicesFunction = "SELECT * FROM public.get_all_offered_services()";
+    private const string GetOfferedServicesPageFunction = "SELECT * FROM public.get_offered_services_page(@PageNumber, @PageSize, @SearchTerm, @IsActive)";
     private const string GetBranchServicesFunction = "SELECT * FROM public.get_branch_services(@BranchId)";
     private const string UpsertBranchServiceFunction = "SELECT public.upsert_branch_service(@BranchId, @ServiceId, @IsActive)";
     private const string CreateOfferedServiceFunction = "SELECT public.create_offered_service(@Code, @Name, @ServiceDurationMinutes)";
@@ -35,11 +36,44 @@ public sealed class BranchConfigurationRepository(DbConnectionFactory connection
             cancellationToken: cancellationToken));
     }
 
+    public async Task<IEnumerable<OfferedServicePageRecord>> GetOfferedServicesPageAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm,
+        bool? isActive,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        var rows = await connection.QueryAsync<OfferedServicePageDbRow>(new CommandDefinition(
+            GetOfferedServicesPageFunction,
+            new { PageNumber = pageNumber, PageSize = pageSize, SearchTerm = searchTerm, IsActive = isActive },
+            commandType: CommandType.Text,
+            cancellationToken: cancellationToken));
+
+        return rows.Select(row => new OfferedServicePageRecord(
+            row.id,
+            row.code,
+            row.name,
+            row.service_duration_minutes,
+            row.is_active,
+            DateTime.SpecifyKind(row.created_at_utc, DateTimeKind.Utc),
+            row.total_count)).ToArray();
+    }
+
     public async Task<long> CreateOfferedServiceAsync(CreateOfferedServiceRequest request, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
         return await connection.ExecuteScalarAsync<long>(new CommandDefinition(CreateOfferedServiceFunction, new { request.Code, request.Name, request.ServiceDurationMinutes }, cancellationToken: cancellationToken));
     }
+
+    private sealed record OfferedServicePageDbRow(
+        long id,
+        string code,
+        string name,
+        int service_duration_minutes,
+        bool is_active,
+        DateTime created_at_utc,
+        long total_count);
 
     public async Task UpdateOfferedServiceAsync(long serviceId, UpdateOfferedServiceRequest request, CancellationToken cancellationToken = default)
     {

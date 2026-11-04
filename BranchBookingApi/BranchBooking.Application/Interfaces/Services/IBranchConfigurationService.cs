@@ -7,6 +7,13 @@ public interface IBranchConfigurationService
 {
     Task<IEnumerable<OfferedServiceDto>> GetOfferedServicesAsync(CancellationToken cancellationToken = default);
 
+    Task<PagedOfferedServiceDto> GetOfferedServicesPageAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm,
+        bool? isActive,
+        CancellationToken cancellationToken = default);
+
     Task<long> CreateOfferedServiceAsync(CreateOfferedServiceRequest request, CancellationToken cancellationToken = default);
 
     Task UpdateOfferedServiceAsync(long serviceId, UpdateOfferedServiceRequest request, CancellationToken cancellationToken = default);

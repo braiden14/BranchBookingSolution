@@ -44,9 +44,18 @@ public static class BranchConfigurationEndpoints
 
         endpoints.MapGet("/api/offered-services", async (
             IBranchConfigurationService configurationService,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] bool? isActive = null) =>
         {
-            var services = await configurationService.GetOfferedServicesAsync(cancellationToken);
+            var services = await configurationService.GetOfferedServicesPageAsync(
+                pageNumber,
+                pageSize,
+                searchTerm,
+                isActive,
+                cancellationToken);
             return Results.Ok(services);
         }).WithTags("Offered services").RequireAuthorization("StaffOrAdmin");
 

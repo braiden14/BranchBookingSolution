@@ -72,8 +72,12 @@ public static class AuthenticationEndpoints
             return Results.Ok(result);
         }).RequireAuthorization("AdminOnly");
 
-        group.MapPatch("/staff/{userId:long}/status", async (long userId, UpdateStaffStatusRequest request, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
+        group.MapPatch("/staff/{userId:long}/status", async (long userId, UpdateStaffStatusRequest request, ClaimsPrincipal principal, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
         {
+            var subject = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
+            if (!long.TryParse(subject, out var requestingUserId)) return Results.Unauthorized();
+            if (requestingUserId == userId) return Results.BadRequest("You cannot change your own account status.");
+
             await authenticationService.UpdateStaffStatusAsync(userId, request.Status, cancellationToken);
             return Results.NoContent();
         }).RequireAuthorization("AdminOnly");

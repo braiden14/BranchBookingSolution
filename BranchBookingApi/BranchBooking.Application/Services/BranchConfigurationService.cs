@@ -23,6 +23,40 @@ public sealed class BranchConfigurationService(
             service.CreatedAtUtc)).ToArray();
     }
 
+    public async Task<PagedOfferedServiceDto> GetOfferedServicesPageAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm,
+        bool? isActive,
+        CancellationToken cancellationToken = default)
+    {
+        pageNumber = Math.Max(pageNumber, 1);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        searchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
+
+        var records = (await configurationRepository.GetOfferedServicesPageAsync(
+            pageNumber,
+            pageSize,
+            searchTerm,
+            isActive,
+            cancellationToken)).ToArray();
+        var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PagedOfferedServiceDto(
+            records.Select(service => new OfferedServiceDto(
+                service.Id,
+                service.Code,
+                service.Name,
+                service.ServiceDurationMinutes,
+                service.IsActive,
+                service.CreatedAtUtc)).ToArray(),
+            pageNumber,
+            pageSize,
+            totalCount,
+            totalPages);
+    }
+
     public async Task<long> CreateOfferedServiceAsync(CreateOfferedServiceRequest request, CancellationToken cancellationToken = default)
     {
         ValidateOfferedService(request.Code, request.Name, request.ServiceDurationMinutes);

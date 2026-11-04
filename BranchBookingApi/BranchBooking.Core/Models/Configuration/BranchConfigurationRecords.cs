@@ -8,6 +8,15 @@ public sealed record OfferedServiceRecord(
     bool IsActive,
     DateTime CreatedAtUtc);
 
+public sealed record OfferedServicePageRecord(
+    long Id,
+    string Code,
+    string Name,
+    int ServiceDurationMinutes,
+    bool IsActive,
+    DateTime CreatedAtUtc,
+    long TotalCount);
+
 public sealed record BranchServiceRecord(
     long BranchServiceId,
     long BranchId,

@@ -10,6 +10,13 @@ public sealed record OfferedServiceDto(
     bool IsActive,
     DateTime CreatedAtUtc);
 
+public sealed record PagedOfferedServiceDto(
+    IReadOnlyList<OfferedServiceDto> Items,
+    int PageNumber,
+    int PageSize,
+    long TotalCount,
+    int TotalPages);
+
 public sealed record BranchServiceDto(
     long BranchServiceId,
     long BranchId,
