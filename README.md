@@ -523,9 +523,9 @@ erDiagram
 
 ### First administrator account
 
-The API includes a disabled-by-default, one-time bootstrap administrator seeder. It does not expose a bootstrap HTTP endpoint and it will not run unless both `BootstrapAdmin:Enabled` and `BootstrapAdmin:Confirm` are true. It also refuses to create an administrator when an active administrator already exists.
+The API includes a one-time bootstrap administrator seeder. It does not expose a bootstrap HTTP endpoint and it will not run unless both `BootstrapAdmin:Enabled` and `BootstrapAdmin:Confirm` are true. It also refuses to create an administrator when an active administrator already exists.
 
-For local development, configure the credentials with user secrets rather than committing them to `appsettings.json`:
+For local development outside Docker, configure the credentials with user secrets rather than committing them to `appsettings.json`:
 
 ```powershell
 dotnet user-secrets init --project BranchBookingApi/BranchBooking.Api
@@ -537,7 +537,7 @@ dotnet user-secrets set "BootstrapAdmin:LastName" "Administrator" --project Bran
 dotnet user-secrets set "BootstrapAdmin:Password" "Use-a-unique-12-character-or-longer-password!" --project BranchBookingApi/BranchBooking.Api
 ```
 
-Start the API once. After the administrator is created, set `BootstrapAdmin:Enabled` and `BootstrapAdmin:Confirm` back to `false` and remove the bootstrap password from the secret store. Never commit bootstrap credentials, passwords, or generated password hashes.
+Start the API once. After the administrator is created, set `BootstrapAdmin:Enabled` and `BootstrapAdmin:Confirm` back to `false` and remove the bootstrap password from the secret store. Never use the committed Docker development credentials outside local development.
 
 ### Prerequisites
 
@@ -571,6 +571,39 @@ Host=localhost;Port=5432;Database=branch_booking;Username=postgres;Password=<you
 ```
 
 Do not use the repository’s development password or signing key in a shared or production environment.
+
+### Run the complete stack with Docker Compose
+
+The repository includes a development-only `.env` with test credentials, so a fresh clone can start the complete stack immediately:
+
+```powershell
+docker compose up --build
+```
+
+This starts PostgreSQL, applies the versioned SQL scripts, creates the development bootstrap administrator, starts the API, and serves the frontend through Nginx. Open the frontend at `http://localhost:5174`; the API is available at `http://localhost:8081` and the database at `localhost:5432`.
+
+Default local Docker administrator:
+
+```text
+Email: admin@example.com
+Password: AdminPassword123!
+```
+
+Change the values in `.env` before sharing the environment or deploying anywhere. The bootstrap seeder runs only when the account does not already exist; to rerun initialization from scratch, use `docker compose down -v`.
+
+Stop the stack with:
+
+```powershell
+docker compose down
+```
+
+To remove the PostgreSQL data volume and recreate the database from all scripts:
+
+```powershell
+docker compose down -v
+```
+
+The Docker setup disables bootstrap administrator creation by default. Configure that workflow explicitly before enabling it.
 
 ### 3. Restore backend dependencies
 

@@ -22,7 +22,7 @@ services:
     volumes:
       - ./DatabaseScripts:/scripts:ro
     restart: "no"
-    # Scripts run once, in numeric order (V1, V2, ... V14), then a marker table is created.
+    # Scripts run once in numeric order (V1 through V16), then a marker table is created.
     command:
       - sh
       - -ec
@@ -42,9 +42,19 @@ services:
     environment:
       ConnectionStrings__BookingDatabase: Host=db;Port=5432;Database=branch_booking;Username=postgres;Password=${POSTGRES_PASSWORD}
       Cors__AllowedOrigins__0: http://localhost:5174
+      Jwt__Issuer: "BranchBookingApi"
+      Jwt__Audience: "BookingUI"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      BootstrapAdmin__Enabled: "${BOOTSTRAP_ADMIN_ENABLED:-true}"
+      BootstrapAdmin__Confirm: "${BOOTSTRAP_ADMIN_CONFIRM:-true}"
       BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL in .env}
+      BootstrapAdmin__FirstName: ${BOOTSTRAP_ADMIN_FIRST_NAME:-System}
+      BootstrapAdmin__LastName: ${BOOTSTRAP_ADMIN_LAST_NAME:-Administrator}
       BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD in .env}
+      OpenTelemetry__Metrics__Exporter: "${OTEL_METRICS_EXPORTER:-disabled}"
+      OpenTelemetry__Metrics__OtlpEndpoint: "${OTEL_METRICS_OTLP_ENDPOINT:-}"
+    ports:
+      - "8081:8080"
 
   ui:
     build: ./BookingUI

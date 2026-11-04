@@ -41,7 +41,6 @@ x86/
 logs/
 
 # Environment and secrets
-.env
 .env.*
 !.env.example
 secrets.json
@@ -76,7 +75,6 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Frontend environment files
-**/.env
 **/.env.*
 !**/.env.example
 

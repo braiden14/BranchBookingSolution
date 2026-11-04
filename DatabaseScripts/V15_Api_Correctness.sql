@@ -25,13 +25,3 @@ AS $$
 	)
 	RETURNING weekly_hours_id;
 $$;
-
-CREATE OR REPLACE FUNCTION public.delete_offered_service(p_service_id BIGINT)
-RETURNS BOOLEAN
-LANGUAGE sql
-AS $$
-	UPDATE public.offered_services
-	SET is_active = FALSE
-	WHERE id = p_service_id
-	RETURNING TRUE;
-$$;
