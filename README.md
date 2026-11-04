@@ -542,6 +542,24 @@ erDiagram
 
 ## Local development setup
 
+### First administrator account
+
+The API includes a disabled-by-default, one-time bootstrap administrator seeder. It does not expose a bootstrap HTTP endpoint and it will not run unless both `BootstrapAdmin:Enabled` and `BootstrapAdmin:Confirm` are true. It also refuses to create an administrator when an active administrator already exists.
+
+For local development, configure the credentials with user secrets rather than committing them to `appsettings.json`:
+
+```powershell
+dotnet user-secrets init --project BranchBookingApi/BranchBooking.Api
+dotnet user-secrets set "BootstrapAdmin:Enabled" "true" --project BranchBookingApi/BranchBooking.Api
+dotnet user-secrets set "BootstrapAdmin:Confirm" "true" --project BranchBookingApi/BranchBooking.Api
+dotnet user-secrets set "BootstrapAdmin:Email" "admin@example.com" --project BranchBookingApi/BranchBooking.Api
+dotnet user-secrets set "BootstrapAdmin:FirstName" "System" --project BranchBookingApi/BranchBooking.Api
+dotnet user-secrets set "BootstrapAdmin:LastName" "Administrator" --project BranchBookingApi/BranchBooking.Api
+dotnet user-secrets set "BootstrapAdmin:Password" "Use-a-unique-12-character-or-longer-password!" --project BranchBookingApi/BranchBooking.Api
+```
+
+Start the API once. After the administrator is created, set `BootstrapAdmin:Enabled` and `BootstrapAdmin:Confirm` back to `false` and remove the bootstrap password from the secret store. Never commit bootstrap credentials, passwords, or generated password hashes.
+
 ### Prerequisites
 
 Install the following before starting development:

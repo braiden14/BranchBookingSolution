@@ -27,6 +27,7 @@ namespace BranchBooking.Api.Configuration
             services.AddSingleton<ICustomerRepository, CustomerRepository>();
             services.AddSingleton<IAuthenticationRepository, AuthenticationRepository>();
             services.AddSingleton<IPasswordService, PasswordService>();
+            services.AddSingleton<BootstrapAdminSeeder>();
 
             var jwtOptions = configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
             if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || jwtOptions.SigningKey.Length < 32)

@@ -2,6 +2,7 @@ using BranchBooking.Api.Configuration;
 using BranchBooking.Api.Endpoints;
 using BranchBooking.Api.Middleware;
 using BranchBooking.Application.Models.Authentication;
+using BranchBooking.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -65,6 +66,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
 var app = builder.Build();
+
+var bootstrapAdminOptions = app.Configuration.GetSection("BootstrapAdmin").Get<BootstrapAdminOptions>() ?? new BootstrapAdminOptions();
+if (bootstrapAdminOptions.Enabled)
+{
+    using var scope = app.Services.CreateScope();
+    var bootstrapAdminSeeder = scope.ServiceProvider.GetRequiredService<BootstrapAdminSeeder>();
+    await bootstrapAdminSeeder.SeedAsync(bootstrapAdminOptions);
+}
 
 if (app.Environment.IsDevelopment())
 {
