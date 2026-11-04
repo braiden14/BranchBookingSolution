@@ -418,6 +418,124 @@ The repository currently uses versioned SQL scripts rather than an application-m
 
 The authentication schema installs the PostgreSQL `citext` extension for case-insensitive emails and seeds the core `Admin`, `Staff`, and `Customer` roles. `V12_Staff_Management.sql` adds the `BranchManager` role.
 
+### Entity relationship diagram
+
+```mermaid
+erDiagram
+    branches {
+        bigint id PK
+        varchar code
+        varchar name
+        smallint status
+        boolean accepts_bookings
+    }
+    offered_services {
+        bigint id PK
+    }
+    branch_services {
+        bigint branch_id FK
+        bigint service_id FK
+    }
+    branch_operational_schedules {
+        bigint id PK
+        bigint branch_id FK
+    }
+    branch_weekly_operating_hours {
+        bigint schedule_id FK
+    }
+    branch_date_overrides {
+        bigint override_id PK
+        bigint schedule_id FK
+    }
+    branch_date_operating_hours {
+        bigint override_id FK
+    }
+    branch_daily_capacity_overrides {
+        bigint branch_id FK
+    }
+    appointments {
+        bigint id PK
+        bigint customer_id FK
+        bigint branch_id FK
+        bigint service_id FK
+    }
+    users {
+        bigint id PK
+        citext email
+        varchar password_hash
+        smallint status
+    }
+    roles {
+        bigint id PK
+        varchar code
+    }
+    permissions {
+        bigint id PK
+    }
+    user_roles {
+        bigint user_id FK
+        bigint role_id FK
+        bigint assigned_by_user_id FK
+    }
+    role_permissions {
+        bigint role_id FK
+        bigint permission_id FK
+    }
+    customer_profiles {
+        bigint user_id PK, FK
+    }
+    staff_profiles {
+        bigint user_id PK, FK
+        bigint branch_id FK
+    }
+    user_sessions {
+        bigint id PK
+        bigint user_id FK
+        bigint replaced_by_session_id FK
+    }
+    email_verification_tokens {
+        bigint user_id FK
+    }
+    password_reset_tokens {
+        bigint user_id FK
+    }
+    staff_invitations {
+        bigint user_id FK
+        bigint role_id FK
+        bigint invited_by_user_id FK
+    }
+    auth_events {
+        bigint user_id FK
+    }
+
+    branches ||--o{ branch_services : offers
+    offered_services ||--o{ branch_services : "offered at"
+    branches ||--o{ branch_operational_schedules : has
+    branch_operational_schedules ||--o{ branch_weekly_operating_hours : defines
+    branch_operational_schedules ||--o{ branch_date_overrides : overrides
+    branch_date_overrides ||--o{ branch_date_operating_hours : defines
+    branches ||--o{ branch_daily_capacity_overrides : has
+    branches ||--o{ appointments : hosts
+    offered_services ||--o{ appointments : booked
+    users ||--o{ appointments : books
+    users ||--o{ user_roles : has
+    roles ||--o{ user_roles : granted
+    users |o--o{ user_roles : assigns
+    roles ||--o{ role_permissions : has
+    permissions ||--o{ role_permissions : in
+    users ||--o| customer_profiles : is
+    users ||--o| staff_profiles : is
+    branches ||--o{ staff_profiles : employs
+    users ||--o{ user_sessions : has
+    user_sessions |o--o| user_sessions : replaced_by
+    users ||--o{ email_verification_tokens : has
+    users ||--o{ password_reset_tokens : has
+    users ||--o{ staff_invitations : invited
+    roles ||--o{ staff_invitations : for_role
+    users ||--o{ staff_invitations : invites
+    users |o--o{ auth_events : logged
+```
+
 ### Branch paging and search
 
 `get_all_branches` returns branch rows with a windowed `total_count`. The optional search term is applied before the count and supports case-insensitive matching against branch code, name, address, city, province, and postal code. Page sizes are clamped by the application and database function to a maximum of 200; the UI exposes 5, 10, 20, and 50.
