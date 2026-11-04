@@ -5,11 +5,12 @@ interface ConfirmationDialogProps {
   description: ReactNode
   confirmLabel: string
   isConfirming?: boolean
+  showCancel?: boolean
   onConfirm: () => void
   onClose: () => void
 }
 
-export function ConfirmationDialog({ title, description, confirmLabel, isConfirming = false, onConfirm, onClose }: ConfirmationDialogProps) {
+export function ConfirmationDialog({ title, description, confirmLabel, isConfirming = false, showCancel = true, onConfirm, onClose }: ConfirmationDialogProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
@@ -28,8 +29,8 @@ export function ConfirmationDialog({ title, description, confirmLabel, isConfirm
     <section className="dialog confirmation-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmation-dialog-title" aria-describedby="confirmation-dialog-description">
       <h2 id="confirmation-dialog-title">{title}</h2>
       <p id="confirmation-dialog-description">{description}</p>
-      <div className="configuration-actions">
-        <button type="button" className="button button--secondary" onClick={onClose} disabled={isConfirming}>Cancel</button>
+       <div className="configuration-actions">
+         {showCancel && <button type="button" className="button button--secondary" onClick={onClose} disabled={isConfirming}>Cancel</button>}
         <button ref={confirmButtonRef} type="button" className="button button--danger" onClick={onConfirm} disabled={isConfirming} aria-busy={isConfirming}>{isConfirming ? 'Working…' : confirmLabel}</button>
       </div>
     </section>

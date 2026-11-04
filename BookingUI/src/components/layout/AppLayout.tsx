@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, ChevronDown, LayoutDashboard, LogOut, Menu, UsersRound, UserRoundCog, X } from 'lucide-react'
+import { Building2, CalendarDays, ChevronDown, LayoutDashboard, LogOut, Menu, UsersRound, UserRoundCog, Wrench, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/providers/AuthProvider'
@@ -9,6 +9,7 @@ const navigation = [
   { label: 'Appointments', icon: CalendarDays, to: '/appointments' },
   { label: 'Customers', icon: UsersRound, to: '/customers' },
   { label: 'Staff', icon: UserRoundCog, to: '/staff' },
+  { label: 'Services', icon: Wrench, to: '/services' },
 ]
 
 export function AppLayout() {

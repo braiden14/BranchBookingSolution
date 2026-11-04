@@ -3,6 +3,7 @@ import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog'
 import { useToast } from '../../../components/ui/ToastProvider'
 import { getBranches } from '../../branches/services/branches.service'
 import type { Branch } from '../../branches/types/branch.types'
+import { useAuth } from '../../auth/providers/AuthProvider'
 import { staffService } from '../services/staff.service'
 import type { InviteStaffRequest, PagedStaff, StaffMember, StaffRole, StaffStatus } from '../types/staff.types'
 
@@ -11,6 +12,7 @@ const roleLabel = (member: StaffMember) => member.roles.some(role => role.toLowe
 
 export function StaffPage() {
   const { showToast } = useToast()
+  const { user } = useAuth()
   const [page, setPage] = useState<PagedStaff | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
@@ -19,6 +21,7 @@ export function StaffPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [memberToChange, setMemberToChange] = useState<StaffMember | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [memberToChangeRole, setMemberToChangeRole] = useState<StaffMember | null>(null)
   const [invitationLink, setInvitationLink] = useState<string | null>(null)
 
   const load = async () => {
@@ -26,6 +29,18 @@ export function StaffPage() {
     try { setPage(await staffService.getStaff(pageNumber)); setError(null) }
     catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load staff.') }
     finally { setIsLoading(false) }
+  }
+
+  const updateRole = async (roleCode: StaffRole) => {
+    if (!memberToChangeRole) return
+    setIsSaving(true)
+    try {
+      await staffService.updateRole(memberToChangeRole.userId, roleCode)
+      showToast('Staff role updated.')
+      setMemberToChangeRole(null)
+      await load()
+    } catch (saveError) { showToast(saveError instanceof Error ? saveError.message : 'The staff role could not be updated.', 'error') }
+    finally { setIsSaving(false) }
   }
 
   useEffect(() => { void load() }, [pageNumber, reloadKey])
@@ -46,12 +61,13 @@ export function StaffPage() {
   return <div className="staff-page">
     <div className="page-heading"><div><span className="eyebrow">Admin / directory</span><h1>Staff</h1><p className="page-heading__description">Invite and manage the people responsible for branch operations.</p></div><button className="button button--primary" onClick={() => setIsInviteOpen(true)}>Invite staff</button></div>
     {error ? <div className="error-state" role="alert"><p>{error}</p><button className="button button--secondary" onClick={() => setReloadKey(value => value + 1)}>Try again</button></div> : isLoading ? <div className="table-loading" aria-label="Loading staff"><div className="skeleton-card" /><div className="skeleton-card" /></div> : <>
-      <section className="section-card branch-table-card"><div className="branch-table-wrapper"><table className="branch-table responsive-table"><thead><tr><th>Staff member</th><th>Role</th><th>Branch</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{page?.items.map(member => <tr key={member.userId}><td data-label="Staff member"><div className="branch-table__name"><div><strong>{member.firstName} {member.lastName}</strong><span>{member.email}</span></div></div></td><td data-label="Role">{roleLabel(member)}</td><td data-label="Branch">{member.branchName ?? '—'}</td><td data-label="Status"><span className={`status-badge ${member.status === 1 ? 'status-badge--active' : 'status-badge--inactive'}`}>{statusLabels[member.status]}</span></td><td data-label="Actions"><button type="button" className="button button--secondary" onClick={() => setMemberToChange(member)}>{member.status === 1 ? 'Deactivate' : 'Activate'}</button></td></tr>)}</tbody></table></div>{!page?.items.length && <div className="empty-state"><h2>No staff found</h2><p>Invite a staff member to begin.</p></div>}</section>
+      <section className="section-card branch-table-card"><div className="branch-table-wrapper"><table className="branch-table responsive-table"><thead><tr><th>Staff member</th><th>Role</th><th>Branch</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{page?.items.map(member => { const isCurrentUser = Number(user?.id) === member.userId; return <tr key={member.userId}><td data-label="Staff member"><div className="branch-table__name"><div><strong>{member.firstName} {member.lastName}</strong><span>{member.email}{isCurrentUser && ' · Your account'}</span></div></div></td><td data-label="Role"><button type="button" className="button button--secondary" onClick={() => setMemberToChangeRole(member)}>{roleLabel(member)}</button></td><td data-label="Branch">{member.branchName ?? '—'}</td><td data-label="Status"><span className={`status-badge ${member.status === 1 ? 'status-badge--active' : 'status-badge--inactive'}`}>{statusLabels[member.status]}</span></td><td data-label="Actions">{isCurrentUser ? <span className="muted">Current account</span> : <button type="button" className="button button--secondary" onClick={() => setMemberToChange(member)}>{member.status === 1 ? 'Deactivate' : 'Activate'}</button>}</td></tr> })}</tbody></table></div>{!page?.items.length && <div className="empty-state"><h2>No staff found</h2><p>Invite a staff member to begin.</p></div>}</section>
       {page && <div className="table-pagination"><span>{page.totalCount} staff members</span><div><button className="icon-button" disabled={page.pageNumber <= 1} onClick={() => setPageNumber(value => value - 1)} aria-label="Previous page">‹</button><span>Page {page.pageNumber} of {Math.max(page.totalPages, 1)}</span><button className="icon-button" disabled={page.pageNumber >= page.totalPages} onClick={() => setPageNumber(value => value + 1)} aria-label="Next page">›</button></div></div>}
     </>}
     {isInviteOpen && <InviteStaffDialog onClose={() => setIsInviteOpen(false)} onInvited={token => { setInvitationLink(`${window.location.origin}/accept-invitation?token=${encodeURIComponent(token)}`); setIsInviteOpen(false); void load() }} />}
     {invitationLink && <InvitationLinkDialog link={invitationLink} onClose={() => setInvitationLink(null)} />}
     {memberToChange && <ConfirmationDialog title={`${memberToChange.status === 1 ? 'Deactivate' : 'Activate'} ${memberToChange.firstName} ${memberToChange.lastName}?`} description={memberToChange.status === 1 ? 'This will prevent the staff member from signing in and revoke active sessions.' : 'This will allow the staff member to sign in again.'} confirmLabel={memberToChange.status === 1 ? 'Deactivate' : 'Activate'} isConfirming={isSaving} onConfirm={() => void updateStatus()} onClose={() => { if (!isSaving) setMemberToChange(null) }} />}
+     {memberToChangeRole && <RoleDialog member={memberToChangeRole} isSaving={isSaving} onClose={() => { if (!isSaving) setMemberToChangeRole(null) }} onSave={role => void updateRole(role)} />}
   </div>
 }
 
@@ -61,7 +77,13 @@ function InvitationLinkDialog({ link, onClose }: { link: string; onClose: () => 
     try { await navigator.clipboard.writeText(link); showToast('Invitation link copied.') }
     catch { showToast('Copy failed. Select and copy the link manually.', 'error') }
   }
-  return <ConfirmationDialog title="Invitation created" description={<span className="invitation-link-content">Print or share this development invitation link: <input className="invitation-link" readOnly value={link} aria-label="Invitation link" /><button type="button" className="button button--secondary" onClick={() => void copy()}>Copy link</button></span>} confirmLabel="Close" onConfirm={onClose} onClose={onClose} />
+  return <ConfirmationDialog title="Invitation created" description={<span className="invitation-link-content">Print or share this development invitation link: <input className="invitation-link" readOnly value={link} aria-label="Invitation link" /><button type="button" className="button button--secondary" onClick={() => void copy()}>Copy link</button></span>} confirmLabel="Close" showCancel={false} onConfirm={onClose} onClose={onClose} />
+}
+
+function RoleDialog({ member, isSaving, onClose, onSave }: { member: StaffMember; isSaving: boolean; onClose: () => void; onSave: (role: StaffRole) => void }) {
+  const currentRole = roleLabel(member) === 'Branch manager' ? 'BranchManager' : roleLabel(member) as StaffRole
+  const [role, setRole] = useState<StaffRole>(currentRole)
+  return <div className="dialog-backdrop" role="presentation"><section className="dialog" role="dialog" aria-modal="true"><h2>Update role</h2><p>{member.firstName} {member.lastName}</p><label>Role<select value={role} onChange={event => setRole(event.target.value as StaffRole)}><option value="Staff">Staff</option><option value="BranchManager">Branch manager</option><option value="Admin">Admin</option></select></label><div className="configuration-actions"><button type="button" className="button button--secondary" onClick={onClose} disabled={isSaving}>Cancel</button><button type="button" className="button button--primary" onClick={() => onSave(role)} disabled={isSaving}>Save role</button></div></section></div>
 }
 
 function InviteStaffDialog({ onClose, onInvited }: { onClose: () => void; onInvited: (token: string) => void }) {

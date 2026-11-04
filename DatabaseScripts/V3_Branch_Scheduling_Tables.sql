@@ -4,6 +4,7 @@ CREATE TABLE public.offered_services (
     code                     VARCHAR(50)  NOT NULL,
     name                     VARCHAR(200) NOT NULL,
     service_duration_minutes INTEGER      NOT NULL,
+    is_active                BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at_utc           TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT uq_offered_services_code UNIQUE (code),

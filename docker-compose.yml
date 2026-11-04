@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: branch_booking
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d branch_booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-migrate:
+    image: postgres:17
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./DatabaseScripts:/scripts:ro
+    restart: "no"
+    # Scripts run once, in numeric order (V1, V2, ... V14), then a marker table is created.
+    command:
+      - sh
+      - -ec
+      - |
+        PSQL="psql -h db -U postgres -d branch_booking -v ON_ERROR_STOP=1"
+        if $$PSQL -tAc "SELECT to_regclass('public.__db_initialised')" | grep -q __db_initialised; then
+          echo "Database already initialised"; exit 0
+        fi
+        for f in $$(ls /scripts/*.sql | sort -V); do echo "Applying $$f"; $$PSQL -f "$$f"; done
+        $$PSQL -c "CREATE TABLE public.__db_initialised (applied_at timestamptz DEFAULT now())"
+
+  api:
+    build: ./BranchBookingApi
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__BookingDatabase: Host=db;Port=5432;Database=branch_booking;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Cors__AllowedOrigins__0: http://localhost:5174
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL in .env}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD in .env}
+
+  ui:
+    build: ./BookingUI
+    depends_on:
+      - api
+    ports:
+      - "5174:80"
+
+volumes:
+  db-data:

@@ -17,4 +17,10 @@ export const staffService = {
       body: JSON.stringify({ status }),
     })
   },
+  updateRole(userId: number, roleCode: string) {
+    return apiClient<void>(`/api/auth/staff/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ roleCode }),
+    })
+  },
 }

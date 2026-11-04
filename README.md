@@ -396,6 +396,8 @@ Apply the scripts in version order to a new database:
 | `V10_Staff_Branch_Assignment.sql` | Adds assigned branch support to staff profiles. |
 | `V11_Inline_SQL_Functions.sql` | Additional inline SQL functions used by the application. |
 | `V12_Staff_Management.sql` | Staff lookup, invitation, directory, and status-management functions. |
+| `V13_Test_Data.sql` | Local development/test branches, services, schedules, and weekly operating hours. |
+| `V14_Offered_Service_Pagination.sql` | Database-backed pagination, search, and availability filtering for offered services. |
 
 The repository currently uses versioned SQL scripts rather than an application-managed migration runner. Apply new or changed scripts explicitly in each environment.
 

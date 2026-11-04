@@ -13,6 +13,7 @@ import { AppointmentsPage } from '../features/appointments/components/Appointmen
 import { CustomersPage } from '../features/customers/components/CustomersPage'
 import { useAuth } from '../features/auth/providers/AuthProvider'
 import { StaffPage } from '../features/staff/components/StaffPage'
+import { ServicesPage } from '../features/services/ServicesPage'
 
 function HomeRedirect() {
   const { user } = useAuth()
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="appointments/:appointmentId/reschedule" element={<AppointmentsPage />} />
          <Route path="customers" element={<AdminOnly><CustomersPage /></AdminOnly>} />
          <Route path="staff" element={<AdminOnly><StaffPage /></AdminOnly>} />
+          <Route path="services" element={<AdminOnly><ServicesPage /></AdminOnly>} />
         <Route path="forbidden" element={<ForbiddenPage />} />
         <Route path="*" element={<HomeRedirect />} />
       </Route>

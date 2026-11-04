@@ -15,6 +15,7 @@ RETURNS TABLE (
 	code                     VARCHAR,
 	name                     VARCHAR,
 	service_duration_minutes INTEGER,
+	is_active                BOOLEAN,
 	created_at_utc           TIMESTAMPTZ
 )
 LANGUAGE sql
@@ -25,9 +26,35 @@ AS $$
 		s.code,
 		s.name,
 		s.service_duration_minutes,
+		s.is_active,
 		s.created_at_utc
 	FROM public.offered_services s
 	ORDER BY s.name, s.id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_offered_service(p_code VARCHAR, p_name VARCHAR, p_service_duration_minutes INTEGER)
+RETURNS BIGINT LANGUAGE plpgsql AS $$
+DECLARE v_id BIGINT;
+BEGIN
+	INSERT INTO public.offered_services(code, name, service_duration_minutes)
+	VALUES (trim(p_code), trim(p_name), p_service_duration_minutes)
+	RETURNING id INTO v_id;
+	RETURN v_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.update_offered_service(p_service_id BIGINT, p_code VARCHAR, p_name VARCHAR, p_service_duration_minutes INTEGER, p_is_active BOOLEAN)
+RETURNS VOID LANGUAGE SQL AS $$
+	UPDATE public.offered_services
+	SET code = trim(p_code), name = trim(p_name), service_duration_minutes = p_service_duration_minutes, is_active = p_is_active
+	WHERE id = p_service_id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.delete_offered_service(p_service_id BIGINT)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+	DELETE FROM public.offered_services WHERE id = p_service_id;
+END;
 $$;
 
 
