@@ -34,11 +34,82 @@ services:
         for f in $$(ls /scripts/*.sql | sort -V); do echo "Applying $$f"; $$PSQL -f "$$f"; done
         $$PSQL -c "CREATE TABLE public.__db_initialised (applied_at timestamptz DEFAULT now())"
 
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: abcdefghijklmnopqrstuv
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  kafka-init:
+    image: apache/kafka:3.9.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_NOTIFICATION_TOPIC: ${KAFKA_NOTIFICATION_TOPIC:-notifications}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >-
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092
+        --create --if-not-exists --topic "$${KAFKA_NOTIFICATION_TOPIC}"
+        --partitions 1 --replication-factor 1;
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092
+        --describe --topic "$${KAFKA_NOTIFICATION_TOPIC}"
+    restart: "no"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "false"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    ports:
+      - "8085:8080"
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: ./NotificationService
+      dockerfile: NotificationService.Worker/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      Kafka__BootstrapServers: kafka:29092
+      Kafka__Topic: ${KAFKA_NOTIFICATION_TOPIC:-notifications}
+      Kafka__GroupId: ${KAFKA_NOTIFICATION_GROUP_ID:-notification-service}
+      Kafka__AutoOffsetReset: ${KAFKA_NOTIFICATION_AUTO_OFFSET_RESET:-Earliest}
+      SendGrid__Enabled: ${SENDGRID_ENABLED:-false}
+      SendGrid__ApiKey: ${SENDGRID_API_KEY:-}
+      SendGrid__FromEmail: ${SENDGRID_FROM_EMAIL:-no-reply@example.com}
+      SendGrid__FromName: ${SENDGRID_FROM_NAME:-Branch Booking}
+    restart: unless-stopped
+
   api:
     build: ./BranchBookingApi
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
     environment:
       ConnectionStrings__BookingDatabase: Host=db;Port=5432;Database=branch_booking;Username=postgres;Password=${POSTGRES_PASSWORD}
       Cors__AllowedOrigins__0: http://localhost:5174
@@ -53,6 +124,14 @@ services:
       BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD in .env}
       OpenTelemetry__Metrics__Exporter: "${OTEL_METRICS_EXPORTER:-disabled}"
       OpenTelemetry__Metrics__OtlpEndpoint: "${OTEL_METRICS_OTLP_ENDPOINT:-}"
+      Kafka__BootstrapServers: kafka:29092
+      Kafka__Topic: ${KAFKA_NOTIFICATION_TOPIC:-notifications}
+      Notifications__InvitationUrlBase: ${NOTIFICATION_INVITATION_URL_BASE:-http://localhost:5174/accept-invitation}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
     ports:
       - "8081:8080"
 
@@ -65,3 +144,4 @@ services:
 
 volumes:
   db-data:
+  kafka-data:

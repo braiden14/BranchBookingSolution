@@ -2,10 +2,11 @@
 
 BranchBookingSolution is a branch-based appointment booking platform. It provides a role-aware React web application, a .NET 10 Minimal API, and a PostgreSQL persistence layer for managing branches, branch configuration, staff access, customer bookings, and appointment operations.
 
-The repository contains two applications:
+The repository currently contains three applications:
 
 - `BranchBookingApi` - the .NET 10 backend solution.
 - `BookingUI` - the React/Vite frontend.
+- `NotificationService` - the .NET 10 Kafka-to-email worker.
 
 The database schema and PostgreSQL functions are maintained in `DatabaseScripts`.
 
@@ -14,6 +15,7 @@ The database schema and PostgreSQL functions are maintained in `DatabaseScripts`
 - [Product overview](#product-overview)
 - [Technology stack](#technology-stack)
 - [Architecture](#architecture)
+- [Notification service](#notification-service)
 - [User roles and authorization](#user-roles-and-authorization)
 - [Features](#features)
 - [Repository structure](#repository-structure)
@@ -90,12 +92,18 @@ flowchart TB
     APP["BranchBooking.Application<br/>Services, DTOs, validation,<br/>authorization, orchestration"]
     INFRA["BranchBooking.Infrastructure<br/>Dapper repositories, PostgreSQL connection,<br/>password and JWT services"]
     DB[("PostgreSQL<br/>Tables, indexes, functions")]
+    KAFKA[(Kafka<br/>notifications topic)]
+    NOTIFY["NotificationService<br/>Kafka consumer + SendGrid"]
+    EMAIL["Email recipients"]
     OBS["Serilog + OpenTelemetry<br/>Structured logs and metrics"]
 
     UI -->|"JSON/HTTP + bearer access token<br/>HttpOnly refresh cookie"| API
     API -->|"Application interfaces"| APP
     APP -->|"Repository interfaces"| INFRA
     INFRA -->|"SQL functions"| DB
+    API -->|"BookingConfirmation / StaffInvitation events"| KAFKA
+    KAFKA --> NOTIFY
+    NOTIFY --> EMAIL
     API -.-> OBS
     APP -.-> OBS
 
@@ -106,6 +114,8 @@ flowchart TB
 
     class UI frontend
     class API,APP,INFRA backend
+    class KAFKA data
+    class NOTIFY,EMAIL observability
     class DB data
     class OBS observability
 ```
@@ -246,6 +256,13 @@ BranchBookingSolution/
 │   ├── BranchBooking.Infrastructure/   # PostgreSQL/Dapper and security services
 │   ├── BranchBooking.Tests/            # NUnit unit and integration tests
 │   └── BranchBookingApi.slnx
+├── NotificationService/
+│   ├── NotificationService.Core/          # Notification contracts
+│   ├── NotificationService.Application/   # Routing and email handlers
+│   ├── NotificationService.Infrastructure/# Kafka consumer and SendGrid adapter
+│   ├── NotificationService.Worker/         # Worker host and configuration
+│   ├── NotificationService.Tests/         # Notification unit tests
+│   └── NotificationService.slnx
 └── DatabaseScripts/
     └── V1_*.sql through V16_*.sql      # PostgreSQL schema, functions, data, and corrective migrations
 ```
@@ -580,7 +597,34 @@ The repository includes a development-only `.env` with test credentials, so a fr
 docker compose up --build
 ```
 
-This starts PostgreSQL, applies the versioned SQL scripts, creates the development bootstrap administrator, starts the API, and serves the frontend through Nginx. Open the frontend at `http://localhost:5174`; the API is available at `http://localhost:8081` and the database at `localhost:5432`.
+This starts PostgreSQL, applies the versioned SQL scripts, starts a single-node Apache Kafka 3.9.0 broker, creates the configured notification topic through the one-shot `kafka-init` service, starts the API and NotificationService, and serves the frontend through Nginx. Open the frontend at `http://localhost:5174`; the API is available at `http://localhost:8081`, Kafka is available to local clients at `localhost:9092`, Kafka UI is available at `http://localhost:8085`, and the database is available at `localhost:5432`.
+
+The Compose stack uses the official `apache/kafka:3.9.0` image in single-node KRaft mode. The API and Compose worker connect using the internal Docker address `kafka:29092`; applications running directly on the host can use `localhost:9092`. SendGrid is disabled by default, so notification emails are logged instead of sent. To enable delivery, set these values in `.env` before starting the stack:
+
+```text
+SENDGRID_ENABLED=true
+SENDGRID_API_KEY=SG.your-api-key
+SENDGRID_FROM_EMAIL=no-reply@example.com
+SENDGRID_FROM_NAME=Branch Booking
+```
+
+Optional Kafka settings:
+
+```text
+KAFKA_NOTIFICATION_TOPIC=notifications
+KAFKA_NOTIFICATION_GROUP_ID=notification-service
+KAFKA_NOTIFICATION_AUTO_OFFSET_RESET=Earliest
+```
+
+The Kafka broker settings are defined in `docker-compose.yml` and use plaintext listeners for local development only. This configuration is not intended for production deployment; use authenticated and encrypted Kafka listeners for shared or production environments.
+
+`kafka-init` creates the topic with one partition and replication factor one using `kafka-topics.sh --create --if-not-exists`. It runs after the broker health check and before the API, NotificationService, and Kafka UI. If the topic is changed through `KAFKA_NOTIFICATION_TOPIC`, recreate the one-shot service so the new topic is provisioned:
+
+```powershell
+docker compose up --force-recreate kafka-init
+```
+
+Kafka UI provides local inspection and message browsing at `http://localhost:8085`. It connects to the broker using the internal Compose address `kafka:29092`.
 
 Default local Docker administrator:
 
@@ -666,6 +710,70 @@ OpenTelemetry__Metrics__OtlpEndpoint
 
 The API requires a configured database connection string and a JWT signing key of at least 32 characters during startup.
 
+### Notification service configuration
+
+`NotificationService` consumes Kafka messages from the configured topic and sends booking confirmation and staff invitation emails through SendGrid.
+
+The API publishes `BookingConfirmation` events after successful bookings and reschedules, and `StaffInvitation` events after successful staff invitations.
+
+Configure the API producer with:
+
+```json
+{
+  "Kafka": {
+    "BootstrapServers": "kafka:29092",
+    "Topic": "notifications"
+  },
+  "Notifications": {
+    "InvitationUrlBase": "http://localhost:5174/accept-invitation"
+  }
+}
+```
+
+Equivalent environment variables are:
+
+```text
+Kafka__BootstrapServers
+Kafka__Topic
+Notifications__InvitationUrlBase
+```
+
+Configure the worker with:
+
+```json
+{
+  "Kafka": {
+    "BootstrapServers": "localhost:9092",
+    "Topic": "notifications",
+    "GroupId": "notification-service",
+    "AutoOffsetReset": "Earliest"
+  },
+  "SendGrid": {
+    "Enabled": false,
+    "ApiKey": "",
+    "FromEmail": "no-reply@example.com",
+    "FromName": "Branch Booking"
+  }
+}
+```
+
+Equivalent worker environment variables are:
+
+```text
+Kafka__BootstrapServers
+Kafka__Topic
+Kafka__GroupId
+Kafka__AutoOffsetReset
+SendGrid__Enabled
+SendGrid__ApiKey
+SendGrid__FromEmail
+SendGrid__FromName
+```
+
+Set `SendGrid__Enabled` to `false` for local development. The worker logs the email instead of sending it. Set it to `true` only when valid SendGrid credentials and sender details are configured. Never commit a real API key.
+
+When running the worker directly on the host rather than through Docker Compose, use `Kafka__BootstrapServers=localhost:9092`. When running inside Compose, use `Kafka__BootstrapServers=kafka:29092`.
+
 ### Frontend configuration
 
 The frontend accepts an optional `VITE_API_BASE_URL` value:
@@ -689,6 +797,16 @@ dotnet run --project .\BranchBookingApi\BranchBooking.Api\BranchBooking.Api.cspr
 ```
 
 The API exposes Swagger/OpenAPI in the Development environment. The exact HTTP/HTTPS URLs depend on `launchSettings.json` and the local ASP.NET Core launch configuration.
+
+### Start the notification service
+
+In another terminal, from the repository root:
+
+```powershell
+dotnet run --project .\NotificationService\NotificationService.Worker\NotificationService.Worker.csproj
+```
+
+The Kafka broker must be reachable at the configured `Kafka__BootstrapServers`. The worker listens to `Kafka__Topic` using `Kafka__GroupId` and commits Kafka offsets only after successful email handling. When SendGrid is disabled, generated emails are written to the worker logs.
 
 ### Start the frontend
 

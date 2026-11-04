@@ -2,6 +2,9 @@ using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.Models.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using BranchBooking.Application.Models.Notifications;
+using BranchBooking.Infrastructure.Notifications;
+using Microsoft.Extensions.Options;
 
 namespace BranchBooking.Api.Endpoints;
 
@@ -56,11 +59,26 @@ public static class AuthenticationEndpoints
                 : Results.Unauthorized();
         }).RequireAuthorization();
 
-        group.MapPost("/staff/invitations", async (InviteStaffRequest request, ClaimsPrincipal principal, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
+        group.MapPost("/staff/invitations", async (InviteStaffRequest request, ClaimsPrincipal principal, IAuthenticationService authenticationService, IBranchService branchService, INotificationPublisher notificationPublisher, IOptions<NotificationOptions> notificationOptions, CancellationToken cancellationToken) =>
         {
             var subject = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
             if (!long.TryParse(subject, out var assignedByUserId)) return Results.Unauthorized();
             var invitationToken = await authenticationService.InviteStaffAsync(assignedByUserId, request, cancellationToken);
+            var branch = request.BranchId is null
+                ? null
+                : await branchService.GetByIdAsync(request.BranchId.Value, CancellationToken.None);
+            _ = Task.Run(() => notificationPublisher.PublishAsync(
+                new NotificationMessage(
+                    Guid.NewGuid().ToString("N"),
+                    NotificationEventType.StaffInvitation,
+                    request.Email,
+                    $"{request.FirstName} {request.LastName}",
+                    new Dictionary<string, string>
+                    {
+                        ["branchName"] = branch?.Name ?? "Branch Booking",
+                        ["invitationLink"] = $"{notificationOptions.Value.InvitationUrlBase}?token={Uri.EscapeDataString(invitationToken)}"
+                    }),
+                CancellationToken.None));
             return Results.Ok(new { invitationToken });
         }).RequireAuthorization("AdminOnly");
 

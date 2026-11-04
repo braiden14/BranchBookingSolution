@@ -4,6 +4,7 @@ using BranchBooking.Application.Models.Authentication;
 using BranchBooking.Infrastructure.Authentication;
 using BranchBooking.Infrastructure.Persistence;
 using BranchBooking.Infrastructure.Persistence.Repositories;
+using BranchBooking.Infrastructure.Notifications;
 
 namespace BranchBooking.Api.Configuration
 {
@@ -37,6 +38,9 @@ namespace BranchBooking.Api.Configuration
 
             services.AddSingleton(jwtOptions);
             services.AddSingleton<ITokenService, JwtTokenService>();
+            services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+            services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
+            services.AddSingleton<INotificationPublisher, KafkaNotificationPublisher>();
 
             return services;
         }
