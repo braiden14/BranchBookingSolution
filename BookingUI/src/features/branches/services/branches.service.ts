@@ -7,11 +7,13 @@ export async function getBranches(pageNumber = 1, pageSize = 5, searchTerm = '')
   return await apiClient<PagedBranches>(`/api/branches?${query.toString()}`)
 }
 
+export async function getBranch(branchId: number): Promise<Branch> {
+  return await apiClient<Branch>(`/api/branches/${branchId}`)
+}
+
 export async function createBranch(request: CreateBranchRequest): Promise<number> {
   const response = await apiClient<number>('/api/branches', { method: 'POST', body: JSON.stringify(request) })
-  console.log('createBranch response:', response)
-
-  return response;
+  return response
 }
 
 export async function activateBranch(branchId: number): Promise<void> {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { apiClient } from '../../../lib/api-client'
-import { getBranches } from './branches.service'
+import { getBranch, getBranches } from './branches.service'
 
 vi.mock('../../../lib/api-client', () => ({
   apiClient: vi.fn(),
@@ -14,6 +14,17 @@ describe('getBranches', () => {
 
     expect(apiClient).toHaveBeenCalledWith('/api/branches?pageNumber=1&pageSize=5')
   })
+
+describe('getBranch', () => {
+  it('loads a branch by id for direct configuration navigation', async () => {
+    const branch = { branchId: 7, code: 'CBD', name: 'Central', addressLine1: '1 Main', city: 'Cape Town', province: 'Western Cape', postalCode: '8000', status: 'Active', acceptsBookings: true, createdAtUtc: '2025-01-01T00:00:00Z' }
+    vi.mocked(apiClient).mockResolvedValueOnce(branch)
+
+    await expect(getBranch(7)).resolves.toEqual(branch)
+
+    expect(apiClient).toHaveBeenCalledWith('/api/branches/7')
+  })
+})
 
   it('trims and encodes the search term', async () => {
     vi.mocked(apiClient).mockResolvedValueOnce({ items: [], pageNumber: 2, pageSize: 10, totalCount: 0, totalPages: 0 })

@@ -3,6 +3,7 @@ export interface OfferedService {
   code: string
   name: string
   serviceDurationMinutes: number
+  isActive: boolean
   createdAtUtc: string
 }
 

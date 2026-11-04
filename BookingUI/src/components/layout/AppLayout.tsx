@@ -36,9 +36,15 @@ interface ProfileMenuProps {
 function ProfileMenu({ name, initials, roleLabel, onSignOut }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsOpen(false) }
+      const closeOnEscape = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          setIsOpen(false)
+          triggerRef.current?.focus()
+        }
+      }
     const closeOnOutsideClick = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsOpen(false)
     }
@@ -50,17 +56,27 @@ function ProfileMenu({ name, initials, roleLabel, onSignOut }: ProfileMenuProps)
     }
   }, [])
 
+  useEffect(() => {
+    if (isOpen) menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+  }, [isOpen])
+
   return (
     <div className="profile-menu" ref={menuRef}>
-      <button type="button" className="profile-chip" aria-haspopup="menu" aria-expanded={isOpen} aria-label={`${name}, ${roleLabel}. Account menu`} onClick={() => setIsOpen(open => !open)}>
+      <button ref={triggerRef} type="button" className="profile-chip" aria-haspopup="menu" aria-expanded={isOpen} aria-label={`${name}, ${roleLabel}. Account menu`} onClick={() => setIsOpen(open => !open)}>
         <span className="avatar avatar--small">{initials}</span>
         <span>{roleLabel}</span>
         <ChevronDown size={15} />
       </button>
       {isOpen && (
-        <div className="profile-menu__panel" role="menu">
+        <div className="profile-menu__panel" role="menu" onKeyDown={event => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setIsOpen(false)
+            triggerRef.current?.focus()
+          }
+        }}>
           <div className="profile-menu__identity"><strong>{name}</strong><small>{roleLabel}</small></div>
-          <button type="button" role="menuitem" className="profile-menu__item" onClick={onSignOut}><LogOut size={15} /> Sign out</button>
+          <button type="button" role="menuitem" className="profile-menu__item" onClick={() => { setIsOpen(false); onSignOut() }}><LogOut size={15} /> Sign out</button>
         </div>
       )}
     </div>
@@ -99,11 +115,10 @@ export function AppLayout() {
         </nav>
         <div className="sidebar__footer">
           <a className="help-card" href="mailto:support@branchbook.example"><span className="help-card__dot" />Need a hand?<strong>Contact support</strong></a>
-          <button className="user-menu" onClick={signOut} aria-label={`Sign out ${user?.name ?? 'user'}`} title="Sign out">
+          <div className="user-menu" aria-label={`${user?.name ?? 'User'} account`}>
             <span className="avatar">{initials}</span>
-            <span className="user-menu__text"><strong>{user?.name}</strong><small>{roleLabel} · Sign out</small></span>
-            <LogOut size={16} />
-          </button>
+            <span className="user-menu__text"><strong>{user?.name}</strong><small>{roleLabel}</small></span>
+          </div>
         </div>
       </aside>
       {isOpen && <button className="sidebar-backdrop" onClick={() => setIsOpen(false)} aria-label="Close navigation" />}
