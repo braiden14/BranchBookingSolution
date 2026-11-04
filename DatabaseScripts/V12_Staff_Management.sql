@@ -6,7 +6,8 @@ VALUES
 	('Admin', 'Administrator', 'Full system access')
 ON CONFLICT (code) DO NOTHING;
 
-CREATE OR REPLACE FUNCTION public.get_auth_user_by_email(p_email CITEXT)
+
+CREATE FUNCTION public.get_auth_user_by_email(p_email TEXT)
 RETURNS TABLE (id BIGINT, email CITEXT, password_hash VARCHAR, first_name VARCHAR, last_name VARCHAR, phone_number VARCHAR, status SMALLINT, email_confirmed BOOLEAN, failed_login_count INTEGER, locked_until_utc TIMESTAMPTZ, authorization_version INTEGER, roles VARCHAR[], assigned_branch_id BIGINT)
 LANGUAGE SQL AS $$
 	SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.phone_number, u.status, u.email_confirmed, u.failed_login_count, u.locked_until_utc, u.authorization_version,
