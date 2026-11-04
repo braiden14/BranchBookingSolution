@@ -76,7 +76,7 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         var userId = await connection.ExecuteScalarAsync<long>(new CommandDefinition(
-            "SELECT public.create_customer(@Email, @PasswordHash, @FirstName, @LastName, @PhoneNumber)",
+            "SELECT public.create_customer(CAST(@Email AS CITEXT), @PasswordHash, @FirstName, @LastName, @PhoneNumber)",
             new
             {
                 Email = normalizedEmail,

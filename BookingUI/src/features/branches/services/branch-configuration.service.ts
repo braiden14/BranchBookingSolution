@@ -10,7 +10,11 @@ import type {
 } from '../types/branch-configuration.types'
 
 export async function getOfferedServices(): Promise<OfferedService[]> {
-  return apiClient<OfferedService[]>('/api/offered-services')
+  const response = await apiClient<{ items: OfferedService[] }>(
+    '/api/offered-services?pageNumber=1&pageSize=200',
+  )
+
+  return response.items
 }
 
 export async function getBranchServices(branchId: number): Promise<BranchService[]> {
