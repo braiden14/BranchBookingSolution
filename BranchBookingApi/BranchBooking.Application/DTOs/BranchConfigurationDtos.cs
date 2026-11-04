@@ -7,6 +7,7 @@ public sealed record OfferedServiceDto(
     string Code,
     string Name,
     int ServiceDurationMinutes,
+    bool IsActive,
     DateTime CreatedAtUtc);
 
 public sealed record BranchServiceDto(

@@ -10,6 +10,8 @@ public interface IAuthenticationService
 
     Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default);
 
+    Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default);
+
     Task<AuthenticationResult> RegisterCustomerAsync(
         RegisterCustomerRequest request,
         CancellationToken cancellationToken = default);

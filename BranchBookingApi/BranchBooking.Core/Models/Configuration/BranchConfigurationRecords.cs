@@ -5,6 +5,7 @@ public sealed record OfferedServiceRecord(
     string Code,
     string Name,
     int ServiceDurationMinutes,
+    bool IsActive,
     DateTime CreatedAtUtc);
 
 public sealed record BranchServiceRecord(

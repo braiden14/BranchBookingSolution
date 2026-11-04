@@ -28,6 +28,23 @@ public sealed class AuthenticationServiceTests
     }
 
     [Test]
+    public async Task UpdateStaffRoleAsync_NormalizesBranchManagerAndUpdatesRepository()
+    {
+        _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
+
+        await _service.UpdateStaffRoleAsync(5, "Branch Manager");
+
+        await _repository.Received(1).UpdateStaffRoleAsync(5, "BranchManager", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void UpdateStaffRoleAsync_WhenRoleIsUnsupported_RejectsRequest()
+    {
+        Assert.ThrowsAsync<DomainValidationException>(async () => await _service.UpdateStaffRoleAsync(5, "Customer"));
+        _repository.DidNotReceive().UpdateStaffRoleAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task GetStaffAsync_ClampsPagingAndReturnsRepositoryResult()
     {
         var expected = new PagedStaffDto([], 1, 100, 0, 0);

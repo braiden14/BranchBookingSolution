@@ -11,6 +11,9 @@ public sealed class BranchConfigurationRepository(DbConnectionFactory connection
     private const string GetOfferedServicesFunction = "SELECT * FROM public.get_all_offered_services()";
     private const string GetBranchServicesFunction = "SELECT * FROM public.get_branch_services(@BranchId)";
     private const string UpsertBranchServiceFunction = "SELECT public.upsert_branch_service(@BranchId, @ServiceId, @IsActive)";
+    private const string CreateOfferedServiceFunction = "SELECT public.create_offered_service(@Code, @Name, @ServiceDurationMinutes)";
+    private const string UpdateOfferedServiceFunction = "SELECT public.update_offered_service(@ServiceId, @Code, @Name, @ServiceDurationMinutes, @IsActive)";
+    private const string DeleteOfferedServiceFunction = "SELECT public.delete_offered_service(@ServiceId)";
 
     private const string GetDateOverridesFunction = "SELECT * FROM public.get_branch_date_overrides(@BranchId, @FromDate, @ToDate)";
     private const string CreateDateOverrideFunction = "SELECT public.create_branch_date_override(@ScheduleId, @OverrideDate, @Reason, @IsClosed)";
@@ -30,6 +33,24 @@ public sealed class BranchConfigurationRepository(DbConnectionFactory connection
             GetOfferedServicesFunction,
             commandType: CommandType.Text,
             cancellationToken: cancellationToken));
+    }
+
+    public async Task<long> CreateOfferedServiceAsync(CreateOfferedServiceRequest request, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<long>(new CommandDefinition(CreateOfferedServiceFunction, new { request.Code, request.Name, request.ServiceDurationMinutes }, cancellationToken: cancellationToken));
+    }
+
+    public async Task UpdateOfferedServiceAsync(long serviceId, UpdateOfferedServiceRequest request, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(UpdateOfferedServiceFunction, new { ServiceId = serviceId, request.Code, request.Name, request.ServiceDurationMinutes, request.IsActive }, cancellationToken: cancellationToken));
+    }
+
+    public async Task DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(DeleteOfferedServiceFunction, new { ServiceId = serviceId }, cancellationToken: cancellationToken));
     }
 
     public async Task<IEnumerable<BranchServiceRecord>> GetBranchServicesAsync(

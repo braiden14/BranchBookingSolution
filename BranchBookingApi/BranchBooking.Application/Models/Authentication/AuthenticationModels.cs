@@ -25,6 +25,8 @@ public sealed record AcceptStaffInvitationRequest(
 
 public sealed record UpdateStaffStatusRequest(UserStatus Status);
 
+public sealed record UpdateStaffRoleRequest(string RoleCode);
+
 public sealed record AuthUserDto(
     long Id,
     string Email,

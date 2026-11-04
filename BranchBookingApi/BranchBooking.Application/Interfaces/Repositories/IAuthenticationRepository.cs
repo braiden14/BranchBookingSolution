@@ -11,6 +11,8 @@ public interface IAuthenticationRepository
 
     Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default);
 
+    Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default);
+
     Task RevokeUserSessionsAsync(long userId, string reason, CancellationToken cancellationToken = default);
 
     Task<AuthUserRecord?> GetUserByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);

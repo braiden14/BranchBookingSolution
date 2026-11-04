@@ -4,6 +4,10 @@ public sealed record UpsertBranchServiceRequest(
     long ServiceId,
     bool IsActive);
 
+public sealed record CreateOfferedServiceRequest(string Code, string Name, int ServiceDurationMinutes);
+
+public sealed record UpdateOfferedServiceRequest(string Code, string Name, int ServiceDurationMinutes, bool IsActive);
+
 public sealed record CreateDateOverrideRequest(
     long ScheduleId,
     DateOnly OverrideDate,

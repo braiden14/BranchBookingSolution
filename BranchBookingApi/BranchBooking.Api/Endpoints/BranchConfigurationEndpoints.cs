@@ -50,6 +50,25 @@ public static class BranchConfigurationEndpoints
             return Results.Ok(services);
         }).WithTags("Offered services").RequireAuthorization("StaffOrAdmin");
 
+        var offeredServicesGroup = endpoints.MapGroup("/api/offered-services")
+            .WithTags("Offered services")
+            .RequireAuthorization("AdminOnly");
+
+        offeredServicesGroup.MapPost("", async (CreateOfferedServiceRequest request, IBranchConfigurationService service, CancellationToken cancellationToken) =>
+            Results.Created("/api/offered-services", new { id = await service.CreateOfferedServiceAsync(request, cancellationToken) }));
+
+        offeredServicesGroup.MapPatch("/{serviceId:long}", async (long serviceId, UpdateOfferedServiceRequest request, IBranchConfigurationService service, CancellationToken cancellationToken) =>
+        {
+            await service.UpdateOfferedServiceAsync(serviceId, request, cancellationToken);
+            return Results.NoContent();
+        });
+
+        offeredServicesGroup.MapDelete("/{serviceId:long}", async (long serviceId, IBranchConfigurationService service, CancellationToken cancellationToken) =>
+        {
+            await service.DeleteOfferedServiceAsync(serviceId, cancellationToken);
+            return Results.NoContent();
+        });
+
         var dateOverridesGroup = endpoints.MapGroup("/api/branches/{branchId:long}/date-overrides")
             .WithTags("Branch date overrides")
             .RequireAuthorization("StaffOrAdmin");

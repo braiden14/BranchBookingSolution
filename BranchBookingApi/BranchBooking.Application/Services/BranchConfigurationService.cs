@@ -19,7 +19,27 @@ public sealed class BranchConfigurationService(
             service.Code,
             service.Name,
             service.ServiceDurationMinutes,
+            service.IsActive,
             service.CreatedAtUtc)).ToArray();
+    }
+
+    public async Task<long> CreateOfferedServiceAsync(CreateOfferedServiceRequest request, CancellationToken cancellationToken = default)
+    {
+        ValidateOfferedService(request.Code, request.Name, request.ServiceDurationMinutes);
+        return await configurationRepository.CreateOfferedServiceAsync(request with { Code = request.Code.Trim(), Name = request.Name.Trim() }, cancellationToken);
+    }
+
+    public async Task UpdateOfferedServiceAsync(long serviceId, UpdateOfferedServiceRequest request, CancellationToken cancellationToken = default)
+    {
+        if (serviceId <= 0) throw new DomainValidationException("A valid service is required.");
+        ValidateOfferedService(request.Code, request.Name, request.ServiceDurationMinutes);
+        await configurationRepository.UpdateOfferedServiceAsync(serviceId, request with { Code = request.Code.Trim(), Name = request.Name.Trim() }, cancellationToken);
+    }
+
+    public async Task DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default)
+    {
+        if (serviceId <= 0) throw new DomainValidationException("A valid service is required.");
+        await configurationRepository.DeleteOfferedServiceAsync(serviceId, cancellationToken);
     }
 
     public async Task<IEnumerable<BranchServiceDto>> GetBranchServicesAsync(
@@ -37,6 +57,12 @@ public sealed class BranchConfigurationService(
             service.ServiceDurationMinutes,
             service.IsActive,
             service.CreatedAtUtc)).ToArray();
+    }
+
+    private static void ValidateOfferedService(string code, string name, int duration)
+    {
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name) || code.Trim().Length > 50 || name.Trim().Length > 200 || duration <= 0)
+            throw new DomainValidationException("Service code, name, and a positive duration are required.");
     }
 
     public async Task<long> UpsertBranchServiceAsync(

@@ -23,6 +23,15 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         return new PagedStaffDto(items, pageNumber, pageSize, totalCount, (int)Math.Ceiling(totalCount / (double)pageSize));
     }
 
+    public async Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            "SELECT public.update_staff_role(@UserId, @RoleCode)",
+            new { UserId = userId, RoleCode = roleCode },
+            cancellationToken: cancellationToken));
+    }
+
     public async Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();

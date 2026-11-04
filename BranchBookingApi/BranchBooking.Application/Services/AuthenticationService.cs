@@ -24,6 +24,29 @@ public sealed class AuthenticationService(
         return await authenticationRepository.GetStaffAsync(pageNumber, pageSize, cancellationToken);
     }
 
+    public async Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0 || string.IsNullOrWhiteSpace(roleCode))
+        {
+            throw new DomainValidationException("A valid staff member and role are required.");
+        }
+
+        var normalizedRoleCode = roleCode.Trim().Replace(" ", string.Empty, StringComparison.Ordinal);
+        if (normalizedRoleCode is not ("Admin" or "Staff" or "BranchManager"))
+        {
+            throw new DomainValidationException("The role must be Admin, Staff, or BranchManager.");
+        }
+
+        var user = await authenticationRepository.GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new DomainValidationException("The staff member could not be found.");
+        if (!user.Roles.Any(role => role.Equals("Admin", StringComparison.OrdinalIgnoreCase) || role.Equals("Staff", StringComparison.OrdinalIgnoreCase) || role.Equals("BranchManager", StringComparison.OrdinalIgnoreCase) || role.Equals("Branch Manager", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new DomainValidationException("Only staff accounts can be assigned staff roles.");
+        }
+
+        await authenticationRepository.UpdateStaffRoleAsync(userId, normalizedRoleCode, cancellationToken);
+    }
+
     public async Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
     {
         if (userId <= 0 || status is not (UserStatus.Active or UserStatus.Disabled))

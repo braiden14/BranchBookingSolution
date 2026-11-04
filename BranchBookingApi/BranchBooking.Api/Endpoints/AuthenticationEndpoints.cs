@@ -60,6 +60,12 @@ public static class AuthenticationEndpoints
             return Results.Ok(new { invitationToken });
         }).RequireAuthorization("AdminOnly");
 
+        group.MapPatch("/staff/{userId:long}/role", async (long userId, UpdateStaffRoleRequest request, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
+        {
+            await authenticationService.UpdateStaffRoleAsync(userId, request.RoleCode, cancellationToken);
+            return Results.NoContent();
+        }).RequireAuthorization("AdminOnly");
+
         group.MapGet("/staff", async (int? pageNumber, int? pageSize, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
         {
             var result = await authenticationService.GetStaffAsync(pageNumber ?? 1, pageSize ?? 20, cancellationToken);
