@@ -391,13 +391,15 @@ Apply the scripts in version order to a new database:
 | `V5_Branch_Configuration_Functions.sql` | Offered services, date overrides, and capacity configuration functions. |
 | `V6_Branch_Activation_Functions.sql` | Branch activation validation and related functions. |
 | `V7_Branch_Lifecycle_Functions.sql` | Branch update and lifecycle functions. |
-| `V8_Authentication_Tables.sql` | Users, roles, permissions, sessions, invitations, and authentication events. |
+| `V8_Authentication_Tables.sql` | Users, roles, user roles, profiles, sessions, and staff invitations. |
 | `V9_Customer_Appointments.sql` | Appointment table and indexes. |
 | `V10_Staff_Branch_Assignment.sql` | Adds assigned branch support to staff profiles. |
 | `V11_Inline_SQL_Functions.sql` | Additional inline SQL functions used by the application. |
 | `V12_Staff_Management.sql` | Staff lookup, invitation, directory, and status-management functions. |
 | `V13_Test_Data.sql` | Local development/test branches, services, schedules, and weekly operating hours. |
 | `V14_Offered_Service_Pagination.sql` | Database-backed pagination, search, and availability filtering for offered services. |
+| `V15_Api_Correctness.sql` | Corrective function definitions for closed-day schedules and safe offered-service deletion. |
+| `V16_Remove_Unused_Objects.sql` | Removes obsolete schedule functions and authentication tables from existing databases. |
 
 The repository currently uses versioned SQL scripts rather than an application-managed migration runner. Apply new or changed scripts explicitly in each environment.
 
@@ -410,12 +412,11 @@ The repository currently uses versioned SQL scripts rather than an application-m
 - Date overrides
 - Capacity overrides
 - `users`
-- `roles`, `permissions`, `user_roles`, and `role_permissions`
+- `roles` and `user_roles`
 - `customer_profiles`
 - `staff_profiles`
 - `user_sessions`
-- Staff invitations and email/password reset token tables
-- Authentication events
+- Staff invitations
 - `appointments`
 
 The authentication schema installs the PostgreSQL `citext` extension for case-insensitive emails and seeds the core `Admin`, `Staff`, and `Customer` roles. `V12_Staff_Management.sql` adds the `BranchManager` role.
@@ -471,17 +472,10 @@ erDiagram
         bigint id PK
         varchar code
     }
-    permissions {
-        bigint id PK
-    }
     user_roles {
         bigint user_id FK
         bigint role_id FK
         bigint assigned_by_user_id FK
-    }
-    role_permissions {
-        bigint role_id FK
-        bigint permission_id FK
     }
     customer_profiles {
         bigint user_id PK, FK
@@ -495,19 +489,10 @@ erDiagram
         bigint user_id FK
         bigint replaced_by_session_id FK
     }
-    email_verification_tokens {
-        bigint user_id FK
-    }
-    password_reset_tokens {
-        bigint user_id FK
-    }
     staff_invitations {
         bigint user_id FK
         bigint role_id FK
         bigint invited_by_user_id FK
-    }
-    auth_events {
-        bigint user_id FK
     }
 
     branches ||--o{ branch_services : offers
@@ -523,19 +508,14 @@ erDiagram
     users ||--o{ user_roles : has
     roles ||--o{ user_roles : granted
     users |o--o{ user_roles : assigns
-    roles ||--o{ role_permissions : has
-    permissions ||--o{ role_permissions : in
     users ||--o| customer_profiles : is
     users ||--o| staff_profiles : is
     branches ||--o{ staff_profiles : employs
     users ||--o{ user_sessions : has
     user_sessions |o--o| user_sessions : replaced_by
-    users ||--o{ email_verification_tokens : has
-    users ||--o{ password_reset_tokens : has
     users ||--o{ staff_invitations : invited
     roles ||--o{ staff_invitations : for_role
     users ||--o{ staff_invitations : invites
-    users |o--o{ auth_events : logged
 ```
 
 ### Branch paging and search

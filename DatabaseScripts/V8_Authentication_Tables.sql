@@ -28,13 +28,6 @@ CREATE TABLE IF NOT EXISTS public.roles (
 	updated_at_utc    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.permissions (
-	id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	code              VARCHAR(100) NOT NULL UNIQUE,
-	description       VARCHAR(500),
-	created_at_utc    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS public.user_roles (
 	user_id              BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
 	role_id              BIGINT NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
@@ -42,13 +35,6 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
 	assigned_at_utc      TIMESTAMPTZ NOT NULL DEFAULT now(),
 	revoked_at_utc       TIMESTAMPTZ,
 	PRIMARY KEY (user_id, role_id)
-);
-
-CREATE TABLE IF NOT EXISTS public.role_permissions (
-	role_id             BIGINT NOT NULL REFERENCES public.roles(id) ON DELETE CASCADE,
-	permission_id       BIGINT NOT NULL REFERENCES public.permissions(id) ON DELETE CASCADE,
-	assigned_at_utc     TIMESTAMPTZ NOT NULL DEFAULT now(),
-	PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.customer_profiles (
@@ -83,24 +69,6 @@ CREATE TABLE IF NOT EXISTS public.user_sessions (
 	created_at_utc           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.email_verification_tokens (
-	id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	user_id           BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-	token_hash        VARCHAR(128) NOT NULL UNIQUE,
-	expires_at_utc    TIMESTAMPTZ NOT NULL,
-	consumed_at_utc   TIMESTAMPTZ,
-	created_at_utc    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.password_reset_tokens (
-	id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	user_id           BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-	token_hash        VARCHAR(128) NOT NULL UNIQUE,
-	expires_at_utc    TIMESTAMPTZ NOT NULL,
-	consumed_at_utc   TIMESTAMPTZ,
-	created_at_utc    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS public.staff_invitations (
 	id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	user_id           BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -110,17 +78,6 @@ CREATE TABLE IF NOT EXISTS public.staff_invitations (
 	expires_at_utc    TIMESTAMPTZ NOT NULL,
 	accepted_at_utc   TIMESTAMPTZ,
 	created_at_utc    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.auth_events (
-	id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	user_id           BIGINT REFERENCES public.users(id) ON DELETE SET NULL,
-	email_attempted   CITEXT,
-	event_type        VARCHAR(50) NOT NULL,
-	ip_address        VARCHAR(64),
-	user_agent        VARCHAR(500),
-	metadata          JSONB,
-	occurred_at_utc   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS ix_user_sessions_user_id ON public.user_sessions(user_id);
