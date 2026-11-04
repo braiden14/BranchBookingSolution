@@ -14,15 +14,16 @@ import { CustomersPage } from '../features/customers/components/CustomersPage'
 import { useAuth } from '../features/auth/providers/AuthProvider'
 import { StaffPage } from '../features/staff/components/StaffPage'
 import { ServicesPage } from '../features/services/ServicesPage'
+import { homeRouteFor } from './navigation'
 
 function HomeRedirect() {
   const { user } = useAuth()
-  return <Navigate to={user?.role === 'customer' || user?.role === 'staff' || user?.role === 'branch-manager' ? '/appointments' : '/overview'} replace />
+  return <Navigate to={homeRouteFor(user?.role)} replace />
 }
 
 function ForbiddenPage() {
   const { user } = useAuth()
-  const home = user?.role === 'customer' || user?.role === 'staff' || user?.role === 'branch-manager' ? '/appointments' : '/overview'
+  const home = homeRouteFor(user?.role)
   return <section className="empty-state"><span className="empty-state__icon">!</span><h1>Access restricted</h1><p className="muted">You do not have permission to view this page.</p><Link className="button button--primary" to={home}>Return to your workspace</Link></section>
 }
 

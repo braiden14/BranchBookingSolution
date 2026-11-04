@@ -2,8 +2,7 @@ import { ChevronLeft, ChevronRight, UsersRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getCustomers } from '../services/customer.service'
 import type { Customer, PagedCustomers } from '../types/customer.types'
-
-const formatDate = (value: string) => new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium' }).format(new Date(value))
+import { formatDateOnly as formatDate } from '../../../dateUtils'
 
 export function CustomersPage() {
   const [pageNumber, setPageNumber] = useState(1)

@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/providers/AuthProvider'
 import { getOperationalAppointments } from '../services/operational-appointment.service'
 import type { OperationalAppointment, PagedOperationalAppointments } from '../types/operational-appointment.types'
-
-const formatDate = (value: string) => new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+import { formatDate } from '../../../dateUtils'
 
 export function OperationalAppointmentsPage() {
   const { user } = useAuth()

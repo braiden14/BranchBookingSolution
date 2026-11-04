@@ -1,21 +1,16 @@
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, Search, X } from 'lucide-react'
+import { ChevronDown, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog'
 import { useToast } from '../../../components/ui/ToastProvider'
+import { addDays, formatDayNumber, formatTime, getToday, startOfWeek } from '../../../dateUtils'
 import { useAuth } from '../../auth/providers/AuthProvider'
 import { appointmentService } from '../services/appointment.service'
 import type { Appointment, AvailableSlot, CustomerBranch, CustomerService } from '../types/appointment.types'
+import { BranchPicker } from './BranchPicker'
+import { CustomerAppointmentList } from './CustomerAppointmentList'
 import { OperationalAppointmentsPage } from './OperationalAppointmentsPage'
-
-const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-const today = localDate(new Date())
-const formatDate = (value: string) => new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-const formatTime = (value: string) => new Intl.DateTimeFormat('en-ZA', { timeStyle: 'short' }).format(new Date(value))
-const formatDay = (value: string) => new Intl.DateTimeFormat('en-ZA', { weekday: 'short' }).format(new Date(`${value}T12:00:00`))
-const formatDayNumber = (value: string) => new Intl.DateTimeFormat('en-ZA', { day: 'numeric', month: 'short' }).format(new Date(`${value}T12:00:00`))
-const startOfWeek = (value: string) => { const date = new Date(`${value}T12:00:00`); date.setDate(date.getDate() - ((date.getDay() + 6) % 7)); return localDate(date) }
-const addDays = (value: string, days: number) => { const date = new Date(`${value}T12:00:00`); date.setDate(date.getDate() + days); return localDate(date) }
+import { WeekSlotPicker } from './WeekSlotPicker'
 
 export function AppointmentsPage() {
   const { user } = useAuth()
@@ -23,6 +18,7 @@ export function AppointmentsPage() {
 }
 
 function CustomerAppointmentsPage() {
+  const today = getToday()
   const { showToast } = useToast()
   const { user } = useAuth()
   const location = useLocation()
@@ -129,26 +125,88 @@ function CustomerAppointmentsPage() {
     finally { setIsCancelling(false) }
   }
 
+  const bookingSummary = `${rescheduling ? 'Reschedule' : 'Book'} ${services.find(service => service.serviceId === serviceId)?.name ?? 'your selected service'} at ${branches.find(branch => branch.branchId === branchId)?.name ?? 'your selected branch'} on ${formatDayNumber(date)} at ${startAt ? formatTime(startAt) : 'the selected time'}?`
+
   return <div className={`appointments-page ${isBookingRoute ? 'appointments-page--booking' : ''}`}>
-    {!isBookingRoute && <><div className="page-heading"><div><span className="eyebrow">Customer / appointments</span><h1>{history ? 'Appointment history' : 'Your appointments'}</h1><p className="page-heading__description">Book and manage your branch appointments.</p></div>{!history && <button className="button button--primary" onClick={() => openBooking()}><Plus size={17} /> Book appointment</button>}</div>
-    <div className="configuration-tabs" role="tablist"><button className={`configuration-tab ${!history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(false)}>Upcoming</button><button className={`configuration-tab ${history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(true)}>History</button></div>
+    {!isBookingRoute && <>
+    <div className="page-heading">
+      <div>
+        <span className="eyebrow">Customer / appointments</span>
+        <h1>{history ? 'Appointment history' : 'Your appointments'}</h1>
+        <p className="page-heading__description">Book and manage your branch appointments.</p>
+      </div>
+      {!history && <button className="button button--primary" onClick={() => openBooking()}><Plus size={17} /> Book appointment</button>}
+    </div>
+    <div className="configuration-tabs" role="tablist">
+      <button className={`configuration-tab ${!history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(false)}>Upcoming</button>
+      <button className={`configuration-tab ${history ? 'configuration-tab--active' : ''}`} onClick={() => setHistory(true)}>History</button>
+    </div>
     {error && <div className="error-state" role="alert"><p>{error}</p><button className="button button--secondary" onClick={() => void loadAppointments()}>Try again</button></div>}
-     {isLoading ? <div className="table-loading"><div className="skeleton-card" /><div className="skeleton-card" /></div> : appointments.length ? <div className="appointment-list">{appointments.map(appointment => <article className="section-card appointment-card" key={appointment.appointmentId}><div><span className="eyebrow">{appointment.status}</span><h2>{appointment.serviceName}</h2><p>{appointment.branchName} · {formatDate(appointment.startAt)}</p><small><Clock3 size={14} /> {Math.round((new Date(appointment.endAt).getTime() - new Date(appointment.startAt).getTime()) / 60000)} minutes</small></div>{!history && <div className="appointment-actions"><button className="button button--secondary" onClick={() => openBooking(appointment)}>Reschedule</button><button className="button button--secondary" onClick={() => setCancellingAppointment(appointment)}><X size={15} /> Cancel</button></div>}</article>)}</div> : <section className="empty-state"><CalendarDays size={28} /><h2>{history ? 'No appointment history' : 'No upcoming appointments'}</h2><p>{history ? 'Completed and cancelled appointments will appear here.' : 'Book your first appointment when you are ready.'}</p></section>}</>}
+    {isLoading
+      ? <div className="table-loading"><div className="skeleton-card" /><div className="skeleton-card" /></div>
+      : <CustomerAppointmentList appointments={appointments} history={history} onReschedule={openBooking} onCancel={setCancellingAppointment} />}</>}
       {showBooking && <div className={isBookingRoute ? 'booking-page' : 'dialog-backdrop'}>
-        {isBookingRoute && <div className="page-heading"><div><span className="eyebrow">Customer / appointments</span><h1>{rescheduling ? 'Reschedule appointment' : 'Book an appointment'}</h1><p className="page-heading__description">Choose a branch, service, date, and available time.</p></div><button type="button" className="button button--secondary" onClick={() => navigate('/appointments')}>Back to appointments</button></div>}
+        {isBookingRoute && <div className="page-heading">
+          <div>
+            <span className="eyebrow">Customer / appointments</span>
+            <h1>{rescheduling ? 'Reschedule appointment' : 'Book an appointment'}</h1>
+            <p className="page-heading__description">Choose a branch, service, date, and available time.</p>
+          </div>
+          <button type="button" className="button button--secondary" onClick={() => navigate('/appointments')}>Back to appointments</button>
+        </div>}
         <section className={isBookingRoute ? 'booking-screen' : 'dialog dialog--booking'} role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
-        {!isBookingRoute && <div className="dialog__header"><div><span className="eyebrow">New appointment</span><h2 id="booking-dialog-title">Book an appointment</h2><p className="muted">Choose a branch, service, date, and available time.</p></div><button className="icon-button" onClick={() => navigate('/appointments')} aria-label="Return to appointments"><X size={20} /></button></div>}
+        {!isBookingRoute && <div className="dialog__header">
+          <div>
+            <span className="eyebrow">New appointment</span>
+            <h2 id="booking-dialog-title">Book an appointment</h2>
+            <p className="muted">Choose a branch, service, date, and available time.</p>
+          </div>
+          <button className="icon-button" onClick={() => navigate('/appointments')} aria-label="Return to appointments"><X size={20} /></button>
+        </div>}
          <div className="login-form booking-form">
            <div className="booking-fields">
-             <label>Branch<span className="booking-field__hint">Search by branch name, city, or code</span><div className="branch-picker"><div className={`booking-input booking-input--with-icon ${isBranchPickerOpen ? 'booking-input--active' : ''}`}><Search size={16} /><input value={branchSearch} placeholder="Search branches" role="combobox" aria-expanded={isBranchPickerOpen} aria-controls="branch-picker-options" aria-autocomplete="list" onFocus={() => setIsBranchPickerOpen(true)} onChange={event => { setBranchSearch(event.target.value); setBranchId(0); setServiceId(0); setIsBranchPickerOpen(true) }} /><ChevronDown size={16} aria-hidden="true" /></div>{isBranchPickerOpen && <div id="branch-picker-options" className="branch-picker__menu" role="listbox">{filteredBranches.length ? filteredBranches.map(branch => <button type="button" role="option" aria-selected={branch.branchId === branchId} key={branch.branchId} onClick={() => { setBranchId(branch.branchId); setServiceId(0); setBranchSearch(`${branch.name} — ${branch.city}`); setIsBranchPickerOpen(false) }}><span>{branch.name}</span><small>{branch.city} · {branch.code}</small></button>) : <p className="branch-picker__empty">No branches match that search.</p>}</div>}</div></label>
-             <label>Service<span className="booking-field__hint">Choose the service you need</span><div className="booking-select"><select value={serviceId} onChange={event => setServiceId(Number(event.target.value))} disabled={!branchId} aria-label="Service"><option value={0}>{branchId ? 'Select a service' : 'Select a branch first'}</option>{services.map(service => <option key={service.serviceId} value={service.serviceId}>{service.name} ({service.durationMinutes} min)</option>)}</select><ChevronDown size={16} /></div></label>
+             <label>Branch<span className="booking-field__hint">Search by branch name, city, or code</span>
+               <BranchPicker
+                 branches={filteredBranches}
+                 selectedBranchId={branchId}
+                 search={branchSearch}
+                 isOpen={isBranchPickerOpen}
+                 onOpen={() => setIsBranchPickerOpen(true)}
+                 onSearchChange={value => { setBranchSearch(value); setBranchId(0); setServiceId(0); setIsBranchPickerOpen(true) }}
+                 onSelect={branch => { setBranchId(branch.branchId); setServiceId(0); setBranchSearch(`${branch.name} — ${branch.city}`); setIsBranchPickerOpen(false) }}
+               />
+             </label>
+             <label>Service<span className="booking-field__hint">Choose the service you need</span>
+               <div className="booking-select">
+                 <select value={serviceId} onChange={event => setServiceId(Number(event.target.value))} disabled={!branchId} aria-label="Service">
+                   <option value={0}>{branchId ? 'Select a service' : 'Select a branch first'}</option>
+                   {services.map(service => <option key={service.serviceId} value={service.serviceId}>{service.name} ({service.durationMinutes} min)</option>)}
+                 </select>
+                 <ChevronDown size={16} />
+               </div>
+             </label>
            </div>
-           {serviceId > 0 && <fieldset className="booking-slots"><legend>Choose a day and available time</legend><div className="week-navigation"><button type="button" className="icon-button" onClick={() => setWeekStart(current => addDays(current, -7))} disabled={!rescheduling && weekStart <= startOfWeek(today)} aria-label="Previous week"><ChevronLeft size={18} /></button><strong>{formatDayNumber(weekDates[0])} – {formatDayNumber(weekDates[6])}</strong><button type="button" className="icon-button" onClick={() => setWeekStart(current => addDays(current, 7))} aria-label="Next week"><ChevronRight size={18} /></button></div>{isLoadingSlots ? <p className="booking-status">Checking availability...</p> : bookingError ? <p className="booking-status booking-status--error" role="alert">{bookingError}</p> : <div className="week-grid">{weekDates.map(day => { const daySlots = slotsByDate[day] ?? []; const unavailable = !rescheduling && day < today; return <div className={`week-day ${date === day ? 'week-day--selected' : ''} ${unavailable ? 'week-day--unavailable' : ''}`} key={day}><button type="button" className="week-day__header" disabled={unavailable} onClick={() => { setDate(day); setStartAt('') }}><strong>{formatDay(day)}</strong><span>{formatDayNumber(day)}</span></button><div className="week-day__slots">{daySlots.length ? daySlots.map(slot => <button type="button" className={`slot-button ${startAt === slot.startAt ? 'slot-button--selected' : ''}`} key={slot.startAt} aria-pressed={startAt === slot.startAt} onClick={() => { setDate(day); setStartAt(slot.startAt); setShowBookingConfirmation(true) }}>{formatTime(slot.startAt)}</button>) : <span className="week-day__empty">{unavailable ? 'Past' : 'No times'}</span>}</div></div> })}</div>}</fieldset>}
-          {bookingError && !serviceId && <p className="booking-status booking-status--error" role="alert">{bookingError}</p>}{validationMessage && <p className="booking-status booking-status--error" role="alert">{validationMessage}</p>}
-            {!isBookingRoute && <div className="configuration-actions"><button type="button" className="button button--secondary" onClick={() => navigate('/appointments')}>Cancel</button></div>}
+           {serviceId > 0 && <WeekSlotPicker
+             weekDates={weekDates}
+             slotsByDate={slotsByDate}
+             selectedDate={date}
+             selectedStartAt={startAt}
+             today={today}
+             allowPastDays={Boolean(rescheduling)}
+             canGoToPreviousWeek={Boolean(rescheduling) || weekStart > startOfWeek(today)}
+             isLoading={isLoadingSlots}
+             error={bookingError}
+             onPreviousWeek={() => setWeekStart(current => addDays(current, -7))}
+             onNextWeek={() => setWeekStart(current => addDays(current, 7))}
+             onSelectDay={day => { setDate(day); setStartAt('') }}
+             onSelectSlot={(day, slotStart) => { setDate(day); setStartAt(slotStart); setShowBookingConfirmation(true) }}
+           />}
+          {bookingError && !serviceId && <p className="booking-status booking-status--error" role="alert">{bookingError}</p>}
+          {validationMessage && <p className="booking-status booking-status--error" role="alert">{validationMessage}</p>}
+          {!isBookingRoute && <div className="configuration-actions"><button type="button" className="button button--secondary" onClick={() => navigate('/appointments')}>Cancel</button></div>}
         </div>
       </section></div>}
-      {showBookingConfirmation && <ConfirmationDialog title={rescheduling ? 'Confirm rescheduling' : 'Confirm appointment'} description={`${rescheduling ? 'Reschedule' : 'Book'} ${services.find(service => service.serviceId === serviceId)?.name ?? 'your selected service'} at ${branches.find(branch => branch.branchId === branchId)?.name ?? 'your selected branch'} on ${formatDayNumber(date)} at ${startAt ? formatTime(startAt) : 'the selected time'}?`} confirmLabel={rescheduling ? 'Reschedule appointment' : 'Book appointment'} isConfirming={isSaving} onConfirm={() => void save()} onClose={() => setShowBookingConfirmation(false)} />}
-     {cancellingAppointment && <ConfirmationDialog title="Cancel appointment?" description={`Cancel your ${cancellingAppointment.serviceName} appointment at ${cancellingAppointment.branchName}?`} confirmLabel="Cancel appointment" isConfirming={isCancelling} onConfirm={() => void cancel()} onClose={() => { if (!isCancelling) setCancellingAppointment(null) }} />}
-   </div>
+      {showBookingConfirmation && <ConfirmationDialog title={rescheduling ? 'Confirm rescheduling' : 'Confirm appointment'} description={bookingSummary} confirmLabel={rescheduling ? 'Reschedule appointment' : 'Book appointment'} tone="primary" isConfirming={isSaving} onConfirm={() => void save()} onClose={() => setShowBookingConfirmation(false)} />}
+      {cancellingAppointment && <ConfirmationDialog title="Cancel appointment?" description={`Cancel your ${cancellingAppointment.serviceName} appointment at ${cancellingAppointment.branchName}?`} confirmLabel="Cancel appointment" isConfirming={isCancelling} onConfirm={() => void cancel()} onClose={() => { if (!isCancelling) setCancellingAppointment(null) }} />}
+  </div>
 }
