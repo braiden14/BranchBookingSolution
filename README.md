@@ -247,7 +247,7 @@ BranchBookingSolution/
 │   ├── BranchBooking.Tests/            # NUnit unit and integration tests
 │   └── BranchBookingApi.slnx
 └── DatabaseScripts/
-	└── V1_*.sql through V12_*.sql      # PostgreSQL schema and functions
+    └── V1_*.sql through V16_*.sql      # PostgreSQL schema, functions, data, and corrective migrations
 ```
 
 ## Backend API
@@ -265,6 +265,7 @@ The API is hosted by `BranchBooking.Api` and registers endpoint groups in `Progr
 | `GET` | `/api/auth/me` | Authenticated | Return the current user. |
 | `POST` | `/api/auth/staff/invitations` | Admin | Invite a staff member or branch manager. |
 | `GET` | `/api/auth/staff` | Admin | Return the paged staff directory. |
+| `PATCH` | `/api/auth/staff/{userId}/role` | Admin | Update a staff member's role. |
 | `PATCH` | `/api/auth/staff/{userId}/status` | Admin | Update staff account status. |
 | `POST` | `/api/auth/staff/invitations/accept` | Public | Accept a staff invitation. |
 
@@ -293,6 +294,9 @@ Authorization: Bearer <access-token>
 | `GET` | `/api/branches/{branchId}/services` | Staff or Admin | Read services configured for a branch. |
 | `POST` | `/api/branches/{branchId}/services` | Staff or Admin | Add or update a branch-service assignment. |
 | `GET` | `/api/offered-services` | Staff or Admin | List available services. |
+| `POST` | `/api/offered-services` | Admin | Create an offered service. |
+| `PATCH` | `/api/offered-services/{serviceId}` | Admin | Update an offered service. |
+| `DELETE` | `/api/offered-services/{serviceId}` | Admin | Soft-delete an offered service. |
 | `GET` | `/api/branches/{branchId}/date-overrides` | Staff or Admin | Read date overrides, optionally filtered by date range. |
 | `POST` | `/api/branches/{branchId}/date-overrides` | Staff or Admin | Create a date override. |
 | `PUT` | `/api/branches/{branchId}/date-overrides/{overrideId}` | Staff or Admin | Update a date override. |
