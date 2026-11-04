@@ -28,6 +28,19 @@ public sealed class AuthenticationServiceTests
     }
 
     [Test]
+    public void LoginAsync_WhenAccountIsLocked_RejectsBeforePasswordVerification()
+    {
+        var user = CreateUser() with { Status = UserStatus.Locked };
+        _repository.GetUserByEmailAsync("user@example.com", Arg.Any<CancellationToken>()).Returns(user);
+
+        var exception = Assert.ThrowsAsync<AuthenticationException>(
+            async () => await _service.LoginAsync(new LoginRequest("user@example.com", "correct")));
+
+        Assert.That(exception!.Message, Is.EqualTo("Invalid email or password."));
+        _passwords.DidNotReceive().Verify(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Test]
     public async Task UpdateStaffRoleAsync_NormalizesBranchManagerAndUpdatesRepository()
     {
         _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
@@ -35,6 +48,25 @@ public sealed class AuthenticationServiceTests
         await _service.UpdateStaffRoleAsync(5, "Branch Manager");
 
         await _repository.Received(1).UpdateStaffRoleAsync(5, "BranchManager", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void RefreshAsync_WhenRotationLosesRace_RevokesFamilyAndRejectsToken()
+    {
+        var session = new RefreshSessionRecord(9, 5, Guid.NewGuid(), "hash", DateTime.UtcNow.AddDays(1), null, null);
+        var user = CreateUser();
+        _tokens.HashRefreshToken("refresh").Returns("hash");
+        _tokens.CreateRefreshToken().Returns("replacement");
+        _tokens.HashRefreshToken("replacement").Returns("replacement-hash");
+        _repository.GetRefreshSessionAsync("hash", Arg.Any<CancellationToken>()).Returns(session);
+        _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(user);
+        _repository.CreateRefreshSessionAsync(5, session.FamilyId, "replacement-hash", Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(10L);
+        _repository.RotateRefreshSessionAsync(session.Id, 10L, Arg.Any<CancellationToken>()).Returns(false);
+
+        var exception = Assert.ThrowsAsync<AuthenticationException>(async () => await _service.RefreshAsync("refresh"));
+
+        Assert.That(exception!.Message, Is.EqualTo("The refresh session is invalid."));
+        _repository.Received(1).RevokeRefreshSessionFamilyAsync(session.FamilyId, "Refresh token reuse detected", Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -171,6 +203,7 @@ public sealed class AuthenticationServiceTests
         _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(user);
         _tokens.CreateAccessToken(user).Returns(("access-token", DateTimeOffset.UtcNow.AddMinutes(10)));
         _repository.CreateRefreshSessionAsync(5, session.FamilyId, "replacement-hash", Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(10L);
+        _repository.RotateRefreshSessionAsync(session.Id, 10L, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _service.RefreshAsync("refresh");
 

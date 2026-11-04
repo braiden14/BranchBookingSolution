@@ -8,7 +8,8 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
 {
     public class BranchRepository(DbConnectionFactory connectionFactory) : IBranchRepository
     {
-        private const string GetAllFunction = "SELECT * FROM public.get_all_branches(@PageNumber, @PageSize)";
+        private const string GetAllFunction = "SELECT * FROM public.get_all_branches(@PageNumber, @PageSize, @SearchTerm)";
+        private const string CountFunction = "SELECT COUNT(*) FROM public.branches WHERE NULLIF(BTRIM(@SearchTerm), '') IS NULL OR CONCAT_WS(' ', code, name, address_line_1, city, province, postal_code) ILIKE '%' || BTRIM(@SearchTerm) || '%'";
         private const string CreateFunction = "SELECT * FROM public.create_branch(@Code, @Name, @AddressLine1, @City, @Province, @PostalCode, @Status, @AcceptsBookings)";
         private const string ActivateFunction = "SELECT public.activate_branch(@BranchId)";
         private const string UpdateFunction = "SELECT public.update_branch(@BranchId, @Code, @Name, @AddressLine1, @City, @Province, @PostalCode)";
@@ -105,6 +106,16 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories
                 row.accepts_bookings,
                 new DateTimeOffset(DateTime.SpecifyKind(row.created_at_utc, DateTimeKind.Utc)),
                 row.total_count)).ToArray();
+        }
+
+        public async Task<long> CountAsync(string? searchTerm = null, CancellationToken cancellationToken = default)
+        {
+            await using var connection = connectionFactory.CreateConnection();
+            return await connection.ExecuteScalarAsync<long>(new CommandDefinition(
+                CountFunction,
+                new { SearchTerm = searchTerm },
+                commandType: CommandType.Text,
+                cancellationToken: cancellationToken));
         }
 
         public async Task<BranchListItemRecord?> GetByIdAsync(long branchId, CancellationToken cancellationToken = default)

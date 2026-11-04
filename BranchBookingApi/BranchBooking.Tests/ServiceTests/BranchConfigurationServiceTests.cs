@@ -23,6 +23,17 @@ public sealed class BranchConfigurationServiceTests
     }
 
     [Test]
+    public void DeleteOfferedServiceAsync_WhenServiceDoesNotExist_RejectsRequest()
+    {
+        _configurationRepository.DeleteOfferedServiceAsync(99, Arg.Any<CancellationToken>()).Returns(false);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _configurationService.DeleteOfferedServiceAsync(99));
+
+        Assert.That(exception!.Message, Is.EqualTo("The offered service could not be found."));
+    }
+
+    [Test]
     public async Task GetBranchServicesAsync_MapsRepositoryRecordsToDtos()
     {
         // Given

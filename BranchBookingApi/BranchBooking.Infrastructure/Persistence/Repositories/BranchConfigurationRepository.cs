@@ -10,6 +10,7 @@ public sealed class BranchConfigurationRepository(DbConnectionFactory connection
 {
     private const string GetOfferedServicesFunction = "SELECT * FROM public.get_all_offered_services()";
     private const string GetOfferedServicesPageFunction = "SELECT * FROM public.get_offered_services_page(@PageNumber, @PageSize, @SearchTerm, @IsActive)";
+    private const string CountOfferedServicesFunction = "SELECT COUNT(*) FROM public.offered_services WHERE (NULLIF(BTRIM(@SearchTerm), '') IS NULL OR code ILIKE '%' || BTRIM(@SearchTerm) || '%' OR name ILIKE '%' || BTRIM(@SearchTerm) || '%') AND (@IsActive IS NULL OR is_active = @IsActive)";
     private const string GetBranchServicesFunction = "SELECT * FROM public.get_branch_services(@BranchId)";
     private const string UpsertBranchServiceFunction = "SELECT public.upsert_branch_service(@BranchId, @ServiceId, @IsActive)";
     private const string CreateOfferedServiceFunction = "SELECT public.create_offered_service(@Code, @Name, @ServiceDurationMinutes)";
@@ -32,6 +33,16 @@ public sealed class BranchConfigurationRepository(DbConnectionFactory connection
         await using var connection = connectionFactory.CreateConnection();
         return await connection.QueryAsync<OfferedServiceRecord>(new CommandDefinition(
             GetOfferedServicesFunction,
+            commandType: CommandType.Text,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task<long> CountOfferedServicesAsync(string? searchTerm, bool? isActive, CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<long>(new CommandDefinition(
+            CountOfferedServicesFunction,
+            new { SearchTerm = searchTerm, IsActive = isActive },
             commandType: CommandType.Text,
             cancellationToken: cancellationToken));
     }
@@ -81,10 +92,10 @@ public sealed class BranchConfigurationRepository(DbConnectionFactory connection
         await connection.ExecuteAsync(new CommandDefinition(UpdateOfferedServiceFunction, new { ServiceId = serviceId, request.Code, request.Name, request.ServiceDurationMinutes, request.IsActive }, cancellationToken: cancellationToken));
     }
 
-    public async Task DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(DeleteOfferedServiceFunction, new { ServiceId = serviceId }, cancellationToken: cancellationToken));
+        return await connection.ExecuteScalarAsync<bool?>(new CommandDefinition(DeleteOfferedServiceFunction, new { ServiceId = serviceId }, cancellationToken: cancellationToken)) ?? false;
     }
 
     public async Task<IEnumerable<BranchServiceRecord>> GetBranchServicesAsync(

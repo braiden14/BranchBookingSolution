@@ -98,6 +98,10 @@ sealed class BranchApiFactory(IBranchService branchService) : WebApplicationFact
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("ConnectionStrings:BookingDatabase", "Host=localhost;Database=integration-tests;Username=test;Password=test");
+        builder.UseSetting("Jwt:Issuer", "integration-tests");
+        builder.UseSetting("Jwt:Audience", "integration-tests");
+        builder.UseSetting("Jwt:SigningKey", "integration-test-signing-key-that-is-at-least-32-characters");
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:BookingDatabase"] = "Host=localhost;Database=integration-tests;Username=test;Password=test",

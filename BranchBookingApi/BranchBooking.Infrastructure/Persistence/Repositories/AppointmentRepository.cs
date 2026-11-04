@@ -13,6 +13,7 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
     private const string ServicesSql = "SELECT * FROM public.get_bookable_services(@BranchId)";
     private const string AppointmentsSql = "SELECT * FROM public.get_customer_appointments(@CustomerId, @History)";
     private const string OperationalAppointmentsSql = "SELECT * FROM public.get_operational_appointments(@BranchId, @History, @PageSize, @Offset)";
+    private const string OperationalAppointmentsCountSql = "SELECT COUNT(*) FROM public.appointments a WHERE (@BranchId IS NULL OR a.branch_id = @BranchId) AND ((@History AND (a.starts_at_utc < now() OR a.status = 'Cancelled')) OR (NOT @History AND a.status = 'Confirmed' AND a.starts_at_utc >= now()))";
     private const string SlotsSql = "SELECT * FROM public.get_available_slots(@CustomerId, @BranchId, @ServiceId, @Date, @ExcludeId, @NowSast)";
     private const string WeeklySlotsSql = "SELECT * FROM public.get_available_slots_week(@CustomerId, @BranchId, @ServiceId, @FromDate, @ToDate, @ExcludeId, @NowSast)";
 
@@ -20,6 +21,7 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
     public async Task<IEnumerable<BookableServiceRecord>> GetBookableServicesAsync(long branchId, CancellationToken cancellationToken = default) => await QueryAsync<BookableServiceRecord>(ServicesSql, new { BranchId = branchId }, cancellationToken);
     public async Task<IEnumerable<AppointmentRecord>> GetCustomerAppointmentsAsync(long customerId, bool history, CancellationToken cancellationToken = default) => await QueryAsync<AppointmentRecord>(AppointmentsSql, new { CustomerId = customerId, History = history }, cancellationToken);
     public async Task<IEnumerable<OperationalAppointmentRecord>> GetOperationalAppointmentsAsync(long? branchId, bool history, int pageNumber, int pageSize, CancellationToken cancellationToken = default) => await QueryAsync<OperationalAppointmentRecord>(OperationalAppointmentsSql, new { BranchId = branchId, History = history, PageSize = pageSize, Offset = (pageNumber - 1) * pageSize }, cancellationToken);
+    public async Task<long> CountOperationalAppointmentsAsync(long? branchId, bool history, CancellationToken cancellationToken = default) => await ExecuteScalarLongAsync(OperationalAppointmentsCountSql, new { BranchId = branchId, History = history }, cancellationToken);
 
     public async Task<IEnumerable<AvailableSlotRecord>> GetAvailableSlotsAsync(long customerId, long branchId, long serviceId, DateOnly date, long? excludingAppointmentId = null, CancellationToken cancellationToken = default)
     {
@@ -60,5 +62,10 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
     {
         await using var connection = connectionFactory.CreateConnection();
         return await connection.ExecuteScalarAsync<bool?>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken)) ?? false;
+    }
+    private async Task<long> ExecuteScalarLongAsync(string sql, object parameters, CancellationToken cancellationToken)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<long>(new CommandDefinition(sql, parameters, commandType: CommandType.Text, cancellationToken: cancellationToken));
     }
 }

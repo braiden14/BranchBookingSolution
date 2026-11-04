@@ -40,7 +40,7 @@ public sealed class BranchConfigurationService(
             searchTerm,
             isActive,
             cancellationToken)).ToArray();
-        var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+        var totalCount = records.FirstOrDefault()?.TotalCount ?? await configurationRepository.CountOfferedServicesAsync(searchTerm, isActive, cancellationToken);
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
 
         return new PagedOfferedServiceDto(
@@ -73,7 +73,10 @@ public sealed class BranchConfigurationService(
     public async Task DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default)
     {
         if (serviceId <= 0) throw new DomainValidationException("A valid service is required.");
-        await configurationRepository.DeleteOfferedServiceAsync(serviceId, cancellationToken);
+        if (!await configurationRepository.DeleteOfferedServiceAsync(serviceId, cancellationToken))
+        {
+            throw new DomainValidationException("The offered service could not be found.");
+        }
     }
 
     public async Task<IEnumerable<BranchServiceDto>> GetBranchServicesAsync(

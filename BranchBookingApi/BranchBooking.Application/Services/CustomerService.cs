@@ -11,7 +11,7 @@ public sealed class CustomerService(ICustomerRepository customerRepository) : IC
         pageNumber = Math.Max(pageNumber, 1);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var records = (await customerRepository.GetPageAsync(pageNumber, pageSize, cancellationToken)).ToArray();
-        var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+        var totalCount = records.FirstOrDefault()?.TotalCount ?? await customerRepository.CountAsync(cancellationToken);
         return new PagedCustomerDto(
             records.Select(customer => new CustomerDto(
                 customer.CustomerId,

@@ -8,6 +8,7 @@ namespace BranchBooking.Application.Interfaces.Repositories;
 public interface IAuthenticationRepository
 {
     Task<PagedStaffDto> GetStaffAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<long> CountStaffAsync(CancellationToken cancellationToken = default);
 
     Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default);
 
@@ -64,7 +65,7 @@ public interface IAuthenticationRepository
         DateTimeOffset expiresAtUtc,
         CancellationToken cancellationToken = default);
 
-    Task RotateRefreshSessionAsync(
+    Task<bool> RotateRefreshSessionAsync(
         long sessionId,
         long replacementSessionId,
         CancellationToken cancellationToken = default);

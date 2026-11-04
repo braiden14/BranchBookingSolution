@@ -92,7 +92,7 @@ public sealed class AuthenticationService(
         }
 
         var user = await authenticationRepository.GetUserByEmailAsync(NormalizeEmail(request.Email), cancellationToken);
-        if (user is null || user.Status == UserStatus.Disabled || user.Status == UserStatus.Invited)
+        if (user is null || user.Status is UserStatus.Disabled or UserStatus.Locked or UserStatus.Invited)
         {
             throw new AuthenticationException("Invalid email or password.");
         }
@@ -140,7 +140,7 @@ public sealed class AuthenticationService(
         }
 
         var user = await authenticationRepository.GetUserByIdAsync(session.UserId, cancellationToken);
-        if (user is null || user.Status is UserStatus.Disabled or UserStatus.Locked)
+        if (user is null || user.Status is UserStatus.Disabled or UserStatus.Locked || user.LockedUntilUtc > now)
         {
             throw new AuthenticationException("The refresh session is invalid.");
         }
@@ -152,7 +152,11 @@ public sealed class AuthenticationService(
             tokenService.HashRefreshToken(replacementToken),
             now.AddDays(30),
             cancellationToken);
-        await authenticationRepository.RotateRefreshSessionAsync(session.Id, replacementId, cancellationToken);
+        if (!await authenticationRepository.RotateRefreshSessionAsync(session.Id, replacementId, cancellationToken))
+        {
+            await authenticationRepository.RevokeRefreshSessionFamilyAsync(session.FamilyId, "Refresh token reuse detected", cancellationToken);
+            throw new AuthenticationException("The refresh session is invalid.");
+        }
 
         return (CreateAuthenticationResult(user), replacementToken);
     }

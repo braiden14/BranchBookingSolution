@@ -7,6 +7,7 @@ namespace BranchBooking.Infrastructure.Persistence.Repositories;
 public sealed class CustomerRepository(DbConnectionFactory connectionFactory) : ICustomerRepository
 {
     private const string PageSql = "SELECT * FROM public.get_customer_page(@PageSize, @Offset)";
+    private const string CountSql = "SELECT COUNT(*) FROM public.users u JOIN public.customer_profiles cp ON cp.user_id = u.id";
 
     public async Task<IEnumerable<CustomerRecord>> GetPageAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -15,5 +16,11 @@ public sealed class CustomerRepository(DbConnectionFactory connectionFactory) : 
             PageSql,
             new { PageSize = pageSize, Offset = (pageNumber - 1) * pageSize },
             cancellationToken: cancellationToken));
+    }
+
+    public async Task<long> CountAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<long>(new CommandDefinition(CountSql, cancellationToken: cancellationToken));
     }
 }

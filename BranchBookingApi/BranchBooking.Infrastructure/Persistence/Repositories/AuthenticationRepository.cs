@@ -16,11 +16,19 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
         var rows = (await connection.QueryAsync<StaffRow>(new CommandDefinition(
             "SELECT * FROM public.get_staff_directory(@PageNumber, @PageSize)",
             new { PageNumber = pageNumber, PageSize = pageSize }, cancellationToken: cancellationToken))).ToArray();
-        var totalCount = rows.FirstOrDefault()?.total_count ?? 0;
+        var totalCount = rows.FirstOrDefault()?.total_count ?? await CountStaffAsync(cancellationToken);
         var items = rows.Select(row => new StaffDto(row.user_id, row.email, row.first_name, row.last_name, row.phone_number,
             (UserStatus)row.status, row.roles.Cast<string>().ToArray(), row.branch_id, row.branch_name, row.created_at_utc,
             row.last_login_at_utc, row.invitation_expires_at_utc)).ToArray();
         return new PagedStaffDto(items, pageNumber, pageSize, totalCount, (int)Math.Ceiling(totalCount / (double)pageSize));
+    }
+
+    public async Task<long> CountStaffAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<long>(new CommandDefinition(
+            "SELECT COUNT(DISTINCT u.id) FROM public.users u JOIN public.user_roles ur ON ur.user_id = u.id AND ur.revoked_at_utc IS NULL JOIN public.roles r ON r.id = ur.role_id WHERE r.code IN ('Admin', 'Staff', 'BranchManager')",
+            cancellationToken: cancellationToken));
     }
 
     public async Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default)
@@ -168,12 +176,12 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
             new { UserId = userId, FamilyId = familyId, RefreshTokenHash = refreshTokenHash, ExpiresAtUtc = expiresAtUtc }, cancellationToken: cancellationToken));
     }
 
-    public async Task RotateRefreshSessionAsync(long sessionId, long replacementSessionId, CancellationToken cancellationToken = default)
+    public async Task<bool> RotateRefreshSessionAsync(long sessionId, long replacementSessionId, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
+        return await connection.ExecuteScalarAsync<bool?>(new CommandDefinition(
             "SELECT public.rotate_refresh_session(@SessionId, @ReplacementSessionId)",
-            new { SessionId = sessionId, ReplacementSessionId = replacementSessionId }, cancellationToken: cancellationToken));
+            new { SessionId = sessionId, ReplacementSessionId = replacementSessionId }, cancellationToken: cancellationToken)) ?? false;
     }
 
     public async Task RevokeRefreshSessionAsync(long sessionId, string reason, CancellationToken cancellationToken = default)

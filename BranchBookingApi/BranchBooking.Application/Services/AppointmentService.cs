@@ -56,7 +56,7 @@ public sealed class AppointmentService(IAppointmentRepository repository) : IApp
         pageNumber = Math.Max(pageNumber, 1);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var records = (await repository.GetOperationalAppointmentsAsync(branchId, history, pageNumber, pageSize, cancellationToken)).ToArray();
-        var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+        var totalCount = records.FirstOrDefault()?.TotalCount ?? await repository.CountOperationalAppointmentsAsync(branchId, history, cancellationToken);
         return new PagedOperationalAppointmentDto(
             records.Select(appointment => new OperationalAppointmentDto(
                 appointment.AppointmentId,

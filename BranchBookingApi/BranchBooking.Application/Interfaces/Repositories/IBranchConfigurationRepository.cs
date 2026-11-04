@@ -14,11 +14,13 @@ public interface IBranchConfigurationRepository
         bool? isActive,
         CancellationToken cancellationToken = default);
 
+    Task<long> CountOfferedServicesAsync(string? searchTerm, bool? isActive, CancellationToken cancellationToken = default);
+
     Task<long> CreateOfferedServiceAsync(CreateOfferedServiceRequest request, CancellationToken cancellationToken = default);
 
     Task UpdateOfferedServiceAsync(long serviceId, UpdateOfferedServiceRequest request, CancellationToken cancellationToken = default);
 
-    Task DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteOfferedServiceAsync(long serviceId, CancellationToken cancellationToken = default);
 
     Task<IEnumerable<BranchServiceRecord>> GetBranchServicesAsync(
         long branchId,

@@ -47,7 +47,7 @@ namespace BranchBooking.Application.Services
             searchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
 
             var records = (await branchRepository.GetPageAsync(pageNumber, pageSize, cancellationToken, searchTerm)).ToArray();
-            var totalCount = records.FirstOrDefault()?.TotalCount ?? 0;
+            var totalCount = records.FirstOrDefault()?.TotalCount ?? await branchRepository.CountAsync(searchTerm, cancellationToken);
             var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
 
             return new PagedBranchDto(

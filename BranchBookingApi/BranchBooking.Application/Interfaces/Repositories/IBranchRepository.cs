@@ -9,6 +9,7 @@ namespace BranchBooking.Application.Interfaces.Repositories
         public Task<long> AddAsync(Branch branch, CancellationToken cancellationToken = default);
         public Task<bool> ActivateAsync(long branchId, CancellationToken cancellationToken = default);
         public Task<IEnumerable<BranchListItemRecord>> GetPageAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default, string? searchTerm = null);
+        public Task<long> CountAsync(string? searchTerm = null, CancellationToken cancellationToken = default);
         public Task<BranchListItemRecord?> GetByIdAsync(long branchId, CancellationToken cancellationToken = default);
         public Task<bool> UpdateAsync(long branchId, UpdateBranchRequest request, CancellationToken cancellationToken = default);
         public Task<bool> DeactivateAsync(long branchId, CancellationToken cancellationToken = default);
