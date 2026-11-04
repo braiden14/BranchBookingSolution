@@ -32,7 +32,7 @@ public static class AppointmentEndpoints
             var customerId = GetUserId(principal);
             if (customerId is null) return Results.Unauthorized();
             var appointmentId = await service.CreateAsync(customerId.Value, request, cancellationToken);
-            var appointment = (await service.GetCustomerAppointmentsAsync(customerId.Value, true, CancellationToken.None))
+            var appointment = (await service.GetCustomerAppointmentsAsync(customerId.Value, false, CancellationToken.None))
                 .FirstOrDefault(item => item.AppointmentId == appointmentId);
             var customer = await authenticationService.GetCurrentUserAsync(customerId.Value, CancellationToken.None);
             if (appointment is not null)
@@ -53,8 +53,10 @@ public static class AppointmentEndpoints
             var customerId = GetUserId(principal);
             if (customerId is null) return Results.Unauthorized();
             await service.RescheduleAsync(customerId.Value, appointmentId, request, cancellationToken);
-            var appointment = (await service.GetCustomerAppointmentsAsync(customerId.Value, true, CancellationToken.None))
+
+            var appointment = (await service.GetCustomerAppointmentsAsync(customerId.Value, false, CancellationToken.None))
                 .FirstOrDefault(item => item.AppointmentId == appointmentId);
+
             var customer = await authenticationService.GetCurrentUserAsync(customerId.Value, CancellationToken.None);
             if (appointment is not null)
             {
