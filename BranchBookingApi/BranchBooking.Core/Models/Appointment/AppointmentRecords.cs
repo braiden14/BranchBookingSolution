@@ -13,6 +13,23 @@ public sealed record AppointmentRecord(
     DateTime EndAt,
     AppointmentStatus Status);
 
+public sealed record AppointmentNotificationRecord(
+    long AppointmentId,
+    long CustomerId,
+    string CustomerEmail,
+    string CustomerFirstName,
+    string CustomerLastName,
+    long BranchId,
+    string BranchName,
+    string BranchAddressLine1,
+    string BranchCity,
+    string BranchProvince,
+    string BranchPostalCode,
+    long ServiceId,
+    string ServiceName,
+    DateTime StartAt,
+    DateTime EndAt);
+
 public sealed record BookableBranchRecord(long BranchId, string Code, string Name, string City);
 public sealed record BookableServiceRecord(long ServiceId, string Code, string Name, int DurationMinutes);
 public sealed record AvailableSlotRecord(DateTime StartAt, DateTime EndAt);

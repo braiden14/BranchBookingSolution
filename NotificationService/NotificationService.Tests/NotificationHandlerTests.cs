@@ -29,13 +29,16 @@ public sealed class NotificationHandlerTests
         {
             ["bookingReference"] = "BK-100",
             ["serviceName"] = "Consultation",
-            ["startTime"] = "10:00"
+            ["startTime"] = "10:00",
+            ["endTime"] = "11:00",
+            ["branchName"] = "Central Branch",
+            ["branchCity"] = "Cape Town"
         });
 
         await sut.HandleAsync(message);
 
         await sender.Received(1).SendAsync(
-            Arg.Is<EmailMessage>(email => email.Subject.Contains("BK-100") && email.HtmlBody.Contains("Consultation")),
+            Arg.Is<EmailMessage>(email => email.Subject.Contains("BK-100") && email.HtmlBody.Contains("Consultation") && email.PlainTextBody.Contains("10:00 - 11:00") && email.PlainTextBody.Contains("Central Branch, Cape Town")),
             Arg.Any<CancellationToken>());
     }
 

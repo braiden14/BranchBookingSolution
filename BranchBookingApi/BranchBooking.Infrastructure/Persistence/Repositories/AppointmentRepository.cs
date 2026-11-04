@@ -16,6 +16,7 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
     private const string OperationalAppointmentsCountSql = "SELECT COUNT(*) FROM public.appointments a WHERE (@BranchId IS NULL OR a.branch_id = @BranchId) AND ((@History AND (a.starts_at_utc < now() OR a.status = 'Cancelled')) OR (NOT @History AND a.status = 'Confirmed' AND a.starts_at_utc >= now()))";
     private const string SlotsSql = "SELECT * FROM public.get_available_slots(@CustomerId, @BranchId, @ServiceId, @Date, @ExcludeId, @NowSast)";
     private const string WeeklySlotsSql = "SELECT * FROM public.get_available_slots_week(@CustomerId, @BranchId, @ServiceId, @FromDate, @ToDate, @ExcludeId, @NowSast)";
+    private const string NotificationDetailsSql = "SELECT * FROM public.get_appointment_notification_details(@CustomerId, @AppointmentId)";
 
     public async Task<IEnumerable<BookableBranchRecord>> GetBookableBranchesAsync(CancellationToken cancellationToken = default) => await QueryAsync<BookableBranchRecord>(BranchesSql, null, cancellationToken);
     public async Task<IEnumerable<BookableServiceRecord>> GetBookableServicesAsync(long branchId, CancellationToken cancellationToken = default) => await QueryAsync<BookableServiceRecord>(ServicesSql, new { BranchId = branchId }, cancellationToken);
@@ -28,6 +29,9 @@ public sealed class AppointmentRepository(DbConnectionFactory connectionFactory)
         var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "South Africa Standard Time" : "Africa/Johannesburg")).DateTime;
         return await QueryAsync<AvailableSlotRecord>(SlotsSql, new { CustomerId = customerId, BranchId = branchId, ServiceId = serviceId, Date = date, ExcludeId = excludingAppointmentId, NowSast = now }, cancellationToken);
     }
+
+    public async Task<AppointmentNotificationRecord?> GetNotificationDetailsAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default) =>
+        (await QueryAsync<AppointmentNotificationRecord>(NotificationDetailsSql, new { CustomerId = customerId, AppointmentId = appointmentId }, cancellationToken)).SingleOrDefault();
 
     public async Task<IEnumerable<WeeklyAvailableSlotRecord>> GetAvailableSlotsForWeekAsync(long customerId, long branchId, long serviceId, DateOnly fromDate, DateOnly toDate, long? excludingAppointmentId = null, CancellationToken cancellationToken = default)
     {

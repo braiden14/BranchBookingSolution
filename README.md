@@ -24,7 +24,6 @@ The database schema and PostgreSQL functions are maintained in `DatabaseScripts`
 - [Database and persistence](#database-and-persistence)
 - [Local development setup](#local-development-setup)
 - [Configuration](#configuration)
-- [Running the applications](#running-the-applications)
 - [Testing](#testing)
 - [UI and layout decisions](#ui-and-layout-decisions)
 - [Security decisions](#security-decisions)
@@ -264,7 +263,7 @@ BranchBookingSolution/
 │   ├── NotificationService.Tests/         # Notification unit tests
 │   └── NotificationService.slnx
 └── DatabaseScripts/
-    └── V1_*.sql through V16_*.sql      # PostgreSQL schema, functions, data, and corrective migrations
+    └── V1_*.sql through V17_*.sql      # PostgreSQL schema, functions, data, and corrective migrations
 ```
 
 ## Backend API
@@ -414,8 +413,9 @@ Apply the scripts in version order to a new database:
 | `V14_Offered_Service_Pagination.sql` | Database-backed pagination, search, and availability filtering for offered services. |
 | `V15_Api_Correctness.sql` | Corrective function definitions for closed-day schedules and safe offered-service deletion. |
 | `V16_Remove_Unused_Objects.sql` | Removes obsolete schedule functions and authentication tables from existing databases. |
+| `V17_Appointment_Notification_Details.sql` | Adds a targeted single-appointment lookup for notification publishing. |
 
-The repository currently uses versioned SQL scripts rather than an application-managed migration runner. Apply new or changed scripts explicitly in each environment.
+The repository currently uses versioned SQL scripts rather than an application-managed migration runner. Apply new or changed scripts explicitly in each environment. The V17 function should be applied before creating or rescheduling appointments through the API.
 
 ### Important database objects
 
@@ -558,13 +558,7 @@ Start the API once. After the administrator is created, set `BootstrapAdmin:Enab
 
 ### Prerequisites
 
-Install the following before starting development:
-
-- .NET 10 SDK
-- Node.js with npm
-- PostgreSQL compatible with the supplied scripts
-- Git
-- Optional: Visual Studio with ASP.NET and web development workloads, or the .NET CLI and a JavaScript editor
+For either setup path, install Git. The Docker Compose path additionally requires Docker Desktop. The individual application path requires the .NET 10 SDK, Node.js with npm, and PostgreSQL. Visual Studio with ASP.NET and web development workloads is optional.
 
 ### 1. Clone the repository
 
@@ -573,23 +567,7 @@ git clone <repository-url>
 cd BranchBookingSolution
 ```
 
-### 2. Create and configure PostgreSQL
-
-Create a database, for example:
-
-```sql
-CREATE DATABASE branch_booking;
-```
-
-Apply the scripts in `DatabaseScripts` in the order listed above. The default development connection string targets:
-
-```text
-Host=localhost;Port=5432;Database=branch_booking;Username=postgres;Password=<your-password>
-```
-
-Do not use the repository’s development password or signing key in a shared or production environment.
-
-### Run the complete stack with Docker Compose
+### Part 1: Run everything with Docker Compose
 
 The repository includes a development-only `.env` with test credentials, so a fresh clone can start the complete stack immediately:
 
@@ -649,18 +627,64 @@ docker compose down -v
 
 The Docker setup disables bootstrap administrator creation by default. Configure that workflow explicitly before enabling it.
 
-### 3. Restore backend dependencies
+### Part 2: Run each application individually
+
+This path runs the .NET API, notification worker, and React UI on the host. PostgreSQL and Kafka must still be running before starting the applications. Docker Compose can be used to run only those infrastructure services:
+
+```powershell
+docker compose up -d db kafka kafka-init
+```
+
+The database is available at `localhost:5432` and Kafka is available at `localhost:9092`. Kafka UI can be started separately when required:
+
+```powershell
+docker compose up -d kafka-ui
+```
+
+Kafka UI is available at `http://localhost:8085`.
+
+#### Run the Booking API
+
+Restore and configure the API connection string and JWT settings using user secrets or environment variables:
 
 ```powershell
 dotnet restore .\BranchBookingApi\BranchBookingApi.slnx
+dotnet user-secrets init --project .\BranchBookingApi\BranchBooking.Api
+dotnet user-secrets set "ConnectionStrings:BookingDatabase" "Host=localhost;Port=5432;Database=branch_booking;Username=postgres;Password=<your-password>" --project .\BranchBookingApi\BranchBooking.Api
+dotnet user-secrets set "Jwt:SigningKey" "Use-a-development-signing-key-that-is-at-least-32-characters" --project .\BranchBookingApi\BranchBooking.Api
+dotnet run --project .\BranchBookingApi\BranchBooking.Api
 ```
 
-### 4. Install frontend dependencies
+The API is available at the URL shown by the application, commonly `https://localhost:44309` or `http://localhost:8081` depending on the launch profile.
+
+#### Run the NotificationService
+
+The worker connects to Kafka using the host address `localhost:9092` when it runs outside Docker. SendGrid is disabled by default and emails are logged:
+
+```powershell
+dotnet restore .\NotificationService\NotificationService.slnx
+$env:Kafka__BootstrapServers = "localhost:9092"
+$env:Kafka__Topic = "notifications"
+$env:Kafka__GroupId = "notification-service"
+$env:SendGrid__Enabled = "false"
+dotnet run --project .\NotificationService\NotificationService.Worker
+```
+
+To send real email, configure `SendGrid__Enabled`, `SendGrid__ApiKey`, `SendGrid__FromEmail`, and `SendGrid__FromName` through a secure environment or user-secrets store.
+
+#### Run the BookingUI
+
+Install frontend dependencies and start the Vite development server:
 
 ```powershell
 Set-Location .\BookingUI
 npm install
+npm run dev
 ```
+
+The UI normally runs at `http://localhost:5173`. Set `VITE_API_BASE_URL` or update the Vite proxy when the API uses a different URL.
+
+Do not use the repository’s development password or signing key in a shared or production environment.
 
 ## Configuration
 
@@ -785,39 +809,6 @@ VITE_API_BASE_URL=https://localhost:44309
 When `VITE_API_BASE_URL` is not set, API calls use relative `/api` paths. The Vite development server proxies `/api` to `https://localhost:44309` with certificate validation disabled for local development.
 
 If the API uses a different local port, update `BookingUI/vite.config.ts` or set `VITE_API_BASE_URL` appropriately.
-
-## Running the applications
-
-### Start the API
-
-From the repository root:
-
-```powershell
-dotnet run --project .\BranchBookingApi\BranchBooking.Api\BranchBooking.Api.csproj
-```
-
-The API exposes Swagger/OpenAPI in the Development environment. The exact HTTP/HTTPS URLs depend on `launchSettings.json` and the local ASP.NET Core launch configuration.
-
-### Start the notification service
-
-In another terminal, from the repository root:
-
-```powershell
-dotnet run --project .\NotificationService\NotificationService.Worker\NotificationService.Worker.csproj
-```
-
-The Kafka broker must be reachable at the configured `Kafka__BootstrapServers`. The worker listens to `Kafka__Topic` using `Kafka__GroupId` and commits Kafka offsets only after successful email handling. When SendGrid is disabled, generated emails are written to the worker logs.
-
-### Start the frontend
-
-In a second terminal:
-
-```powershell
-Set-Location .\BookingUI
-npm run dev
-```
-
-Vite serves the frontend on port 5173 by default.
 
 ### Build the frontend
 
@@ -963,15 +954,17 @@ Before deploying:
 8. Confirm the database function version used by the deployed API matches the repository version.
 9. Run backend tests and frontend tests as part of CI.
 
-The repository does not currently include a container definition, cloud deployment manifest, CI workflow, or automatic database migration runner. These should be added as deployment requirements evolve.
+The repository includes Dockerfiles and a Docker Compose development environment, but it does not currently include a cloud deployment manifest, CI workflow, or automatic database migration runner. These should be added as deployment requirements evolve.
 
 ## Known limitations and operational notes
 
-- Database scripts are versioned but are applied manually; maintain an external record of which scripts have run in each environment.
-- The API’s default local connection string is for development only.
-- The local Vite proxy targets `https://localhost:44309`; update it when the API launch profile uses a different port.
-- The current frontend API client stores the access token in memory, so a full page reload relies on the refresh cookie and `/api/auth/refresh`.
-- Search and pagination for the branches table are server-side. The database function update must be applied before the deployed API can use the new search parameter.
+- Database scripts are versioned but are applied manually; maintain an external record of which scripts have run in each environment. Docker Compose applies them automatically only when the database volume is initialized.
+- The API’s default local connection string, Compose credentials, and plaintext Kafka listeners are for development only.
+- The local Vite proxy targets the API launch profile configured in `BookingUI/vite.config.ts`; update it when the API uses a different port or host.
+- The frontend API client stores the access token in memory, so a full page reload relies on the refresh cookie and `/api/auth/refresh`.
+- Kafka topic provisioning is currently configured for a single-node local broker with one partition and replication factor one. Production Kafka should use appropriate replication, security, retention, and monitoring settings.
+- Kafka and email publishing are asynchronous. A temporary Kafka outage can delay or lose fire-and-forget notifications from the API; a durable outbox and retry worker would be required for guaranteed delivery.
+- SendGrid-disabled mode logs generated email content for development and must not be used where email contents may contain sensitive production data.
 - Some endpoint workflows depend on configured branch services, schedules, capacity, and role assignments before a branch can be activated or booked.
 
 ## Development conventions
@@ -986,6 +979,3 @@ The repository does not currently include a container definition, cloud deployme
 - Add or update automated tests for service behavior, authorization-sensitive endpoint behavior, and important frontend interactions.
 - Avoid committing secrets, local database passwords, generated build output, or environment-specific configuration.
 
-## License and project status
-
-No license file or production support policy is currently included in the repository. Treat the project as an actively developed application and confirm licensing, ownership, and operational support requirements before external distribution or production use.

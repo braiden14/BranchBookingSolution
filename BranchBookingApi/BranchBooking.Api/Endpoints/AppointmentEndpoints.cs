@@ -2,7 +2,6 @@ using BranchBooking.Application.Interfaces.Services;
 using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Models.Request;
 using BranchBooking.Application.Models.Notifications;
-using BranchBooking.Application.Models.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -27,18 +26,14 @@ public static class AppointmentEndpoints
             var customerId = GetUserId(principal);
             return customerId is null ? Results.Unauthorized() : Results.Ok(await service.GetCustomerAppointmentsAsync(customerId.Value, history, cancellationToken));
         });
-        group.MapPost("/appointments", async (CreateAppointmentRequest request, ClaimsPrincipal principal, IAppointmentService service, IAuthenticationService authenticationService, INotificationPublisher notificationPublisher, CancellationToken cancellationToken) =>
+        group.MapPost("/appointments", async (CreateAppointmentRequest request, ClaimsPrincipal principal, IAppointmentService service, INotificationPublisher notificationPublisher, CancellationToken cancellationToken) =>
         {
             var customerId = GetUserId(principal);
             if (customerId is null) return Results.Unauthorized();
             var appointmentId = await service.CreateAsync(customerId.Value, request, cancellationToken);
-            var appointment = (await service.GetCustomerAppointmentsAsync(customerId.Value, false, CancellationToken.None))
-                .FirstOrDefault(item => item.AppointmentId == appointmentId);
-            var customer = await authenticationService.GetCurrentUserAsync(customerId.Value, CancellationToken.None);
-            if (appointment is not null)
-            {
-                PublishBookingConfirmation(notificationPublisher, appointment, customer);
-            }
+
+            PublishBookingConfirmation(notificationPublisher, service, appointmentId, customerId.Value);
+
             return Results.Created($"/api/customer/appointments/{appointmentId}", new { appointmentId });
         });
         group.MapPost("/appointments/{appointmentId:long}/cancel", async (long appointmentId, ClaimsPrincipal principal, IAppointmentService service, CancellationToken cancellationToken) =>
@@ -48,20 +43,14 @@ public static class AppointmentEndpoints
             await service.CancelAsync(customerId.Value, appointmentId, cancellationToken);
             return Results.NoContent();
         });
-        group.MapPost("/appointments/{appointmentId:long}/reschedule", async (long appointmentId, RescheduleAppointmentRequest request, ClaimsPrincipal principal, IAppointmentService service, IAuthenticationService authenticationService, INotificationPublisher notificationPublisher, CancellationToken cancellationToken) =>
+        group.MapPost("/appointments/{appointmentId:long}/reschedule", async (long appointmentId, RescheduleAppointmentRequest request, ClaimsPrincipal principal, IAppointmentService service, INotificationPublisher notificationPublisher, CancellationToken cancellationToken) =>
         {
             var customerId = GetUserId(principal);
             if (customerId is null) return Results.Unauthorized();
             await service.RescheduleAsync(customerId.Value, appointmentId, request, cancellationToken);
 
-            var appointment = (await service.GetCustomerAppointmentsAsync(customerId.Value, false, CancellationToken.None))
-                .FirstOrDefault(item => item.AppointmentId == appointmentId);
+            PublishBookingConfirmation(notificationPublisher, service, appointmentId, customerId.Value);
 
-            var customer = await authenticationService.GetCurrentUserAsync(customerId.Value, CancellationToken.None);
-            if (appointment is not null)
-            {
-                PublishBookingConfirmation(notificationPublisher, appointment, customer);
-            }
             return Results.NoContent();
         });
 
@@ -105,20 +94,29 @@ public static class AppointmentEndpoints
         return long.TryParse(value, out var id) ? id : null;
     }
 
-    private static void PublishBookingConfirmation(INotificationPublisher publisher, AppointmentDto appointment, AuthUserDto customer)
+    private static void PublishBookingConfirmation(INotificationPublisher publisher, IAppointmentService service, long appointmentId, long customerId)
     {
         _ = Task.Run(async () =>
         {
+            var appointment = await service.GetNotificationDetailsAsync(customerId, appointmentId, CancellationToken.None);
+            if (appointment is null) return;
+
             var message = new NotificationMessage(
                 Guid.NewGuid().ToString("N"),
                 NotificationEventType.BookingConfirmation,
-                customer.Email,
-                $"{customer.FirstName} {customer.LastName}",
+                appointment.CustomerEmail,
+                appointment.CustomerName,
                 new Dictionary<string, string>
                 {
                     ["bookingReference"] = appointment.AppointmentId.ToString(),
                     ["serviceName"] = appointment.ServiceName,
-                    ["startTime"] = appointment.StartAt.ToString("O")
+                    ["startTime"] = appointment.StartAt.ToString("O"),
+                    ["endTime"] = appointment.EndAt.ToString("O"),
+                    ["branchName"] = appointment.BranchName,
+                    ["branchAddressLine1"] = appointment.BranchAddressLine1,
+                    ["branchCity"] = appointment.BranchCity,
+                    ["branchProvince"] = appointment.BranchProvince,
+                    ["branchPostalCode"] = appointment.BranchPostalCode
                 });
             await publisher.PublishAsync(message, CancellationToken.None);
         });

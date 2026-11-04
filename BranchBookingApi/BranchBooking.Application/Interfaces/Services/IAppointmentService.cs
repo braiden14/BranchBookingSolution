@@ -14,4 +14,5 @@ public interface IAppointmentService
     Task<long> CreateAsync(long customerId, CreateAppointmentRequest request, CancellationToken cancellationToken = default);
     Task CancelAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default);
     Task RescheduleAsync(long customerId, long appointmentId, RescheduleAppointmentRequest request, CancellationToken cancellationToken = default);
+    Task<AppointmentNotificationDto?> GetNotificationDetailsAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default);
 }

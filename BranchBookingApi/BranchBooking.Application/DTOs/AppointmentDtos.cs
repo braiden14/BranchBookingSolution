@@ -15,6 +15,18 @@ public sealed record AppointmentDto(
     DateTime StartAt,
     DateTime EndAt,
     AppointmentStatus Status);
+public sealed record AppointmentNotificationDto(
+    long AppointmentId,
+    string CustomerEmail,
+    string CustomerName,
+    string BranchName,
+    string BranchAddressLine1,
+    string BranchCity,
+    string BranchProvince,
+    string BranchPostalCode,
+    string ServiceName,
+    DateTime StartAt,
+    DateTime EndAt);
 public sealed record OperationalAppointmentDto(
     long AppointmentId,
     long CustomerId,

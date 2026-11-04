@@ -14,4 +14,5 @@ public interface IAppointmentRepository
     Task<long> CreateAsync(long customerId, long branchId, long serviceId, DateTime startAt, CancellationToken cancellationToken = default);
     Task<bool> CancelAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default);
     Task<bool> RescheduleAsync(long customerId, long appointmentId, DateTime startAt, CancellationToken cancellationToken = default);
+    Task<AppointmentNotificationRecord?> GetNotificationDetailsAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default);
 }

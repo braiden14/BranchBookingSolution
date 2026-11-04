@@ -101,6 +101,27 @@ public sealed class AppointmentService(IAppointmentRepository repository) : IApp
         if (!await repository.RescheduleAsync(customerId, appointmentId, request.StartAt, cancellationToken)) throw new DomainValidationException("The selected appointment slot is no longer available.");
     }
 
+    public async Task<AppointmentNotificationDto?> GetNotificationDetailsAsync(long customerId, long appointmentId, CancellationToken cancellationToken = default)
+    {
+        ValidateId(customerId, "Customer ID");
+        ValidateId(appointmentId, "Appointment ID");
+        var appointment = await repository.GetNotificationDetailsAsync(customerId, appointmentId, cancellationToken);
+        return appointment is null
+            ? null
+            : new AppointmentNotificationDto(
+                appointment.AppointmentId,
+                appointment.CustomerEmail,
+                $"{appointment.CustomerFirstName} {appointment.CustomerLastName}",
+                appointment.BranchName,
+                appointment.BranchAddressLine1,
+                appointment.BranchCity,
+                appointment.BranchProvince,
+                appointment.BranchPostalCode,
+                appointment.ServiceName,
+                appointment.StartAt,
+                appointment.EndAt);
+    }
+
     private static void ValidateId(long value, string name) { if (value <= 0) throw new DomainValidationException($"{name} must be greater than zero."); }
     private static void ValidateDate(DateOnly date) { if (date < DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Sast).DateTime)) throw new DomainValidationException("Past dates cannot be booked."); }
     private static void ValidateDateTime(DateTime value) { if (value.Minute % 15 != 0 || value.Second != 0 || value.Kind == DateTimeKind.Utc) throw new DomainValidationException("Appointments must use 15-minute local SAST slots."); ValidateDate(DateOnly.FromDateTime(value)); if (value <= TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Sast).DateTime) throw new DomainValidationException("The appointment must be in the future."); }
