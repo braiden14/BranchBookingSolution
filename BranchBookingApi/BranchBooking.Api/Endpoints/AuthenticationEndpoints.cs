@@ -13,34 +13,38 @@ public static class AuthenticationEndpoints
     {
         var group = endpoints.MapGroup("/api/auth").WithTags("Authentication");
 
-        group.MapPost("/register", async (RegisterCustomerRequest request, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
+        group.MapPost("/register", async (RegisterCustomerRequest request, IAuthenticationService authenticationService, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
         {
             var result = await authenticationService.RegisterCustomerAsync(request, cancellationToken);
+            loggerFactory.CreateLogger("AuthenticationEndpoints").LogInformation("Customer registration completed");
             return Results.Created("/api/auth/me", result);
         });
 
-        group.MapPost("/login", async (LoginRequest request, IAuthenticationService authenticationService, HttpResponse response, CancellationToken cancellationToken) =>
+        group.MapPost("/login", async (LoginRequest request, IAuthenticationService authenticationService, ILoggerFactory loggerFactory, HttpResponse response, CancellationToken cancellationToken) =>
         {
             var authentication = await authenticationService.LoginAsync(request, cancellationToken);
             SetRefreshCookie(response, authentication.RefreshToken);
+            loggerFactory.CreateLogger("AuthenticationEndpoints").LogInformation("Customer or staff login completed");
             return Results.Ok(authentication.Result);
         });
 
-        group.MapPost("/refresh", async (IAuthenticationService authenticationService, HttpRequest request, HttpResponse response, CancellationToken cancellationToken) =>
+        group.MapPost("/refresh", async (IAuthenticationService authenticationService, ILoggerFactory loggerFactory, HttpRequest request, HttpResponse response, CancellationToken cancellationToken) =>
         {
             if (!request.Cookies.TryGetValue(RefreshCookie, out var refreshToken)) return Results.Unauthorized();
             var authentication = await authenticationService.RefreshAsync(refreshToken, cancellationToken);
             SetRefreshCookie(response, authentication.RefreshToken);
+            loggerFactory.CreateLogger("AuthenticationEndpoints").LogDebug("Refresh token rotation completed");
             return Results.Ok(authentication.Result);
         });
 
-        group.MapPost("/logout", async (IAuthenticationService authenticationService, HttpRequest request, HttpResponse response, CancellationToken cancellationToken) =>
+        group.MapPost("/logout", async (IAuthenticationService authenticationService, ILoggerFactory loggerFactory, HttpRequest request, HttpResponse response, CancellationToken cancellationToken) =>
         {
             if (request.Cookies.TryGetValue(RefreshCookie, out var refreshToken))
             {
                 await authenticationService.LogoutAsync(refreshToken, cancellationToken);
             }
             response.Cookies.Delete(RefreshCookie, CookieOptions());
+            loggerFactory.CreateLogger("AuthenticationEndpoints").LogDebug("Logout completed");
             return Results.NoContent();
         });
 

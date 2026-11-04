@@ -26,10 +26,11 @@ namespace BranchBooking.Api.Middleware
             if (exception is DomainException)
             {
                 logger.LogWarning(
-                    "Domain exception while processing {HttpMethod} {RequestPath}. TraceId: {TraceId}. Message: {Message}",
+                    "Domain exception while processing {HttpMethod} {RequestPath}. TraceId: {TraceId}. StatusCode: {StatusCode}. Message: {Message}",
                     httpContext.Request.Method,
                     httpContext.Request.Path,
                     traceId,
+                    statusCode,
                     exception.Message);
             }
             else

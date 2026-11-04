@@ -12,6 +12,8 @@ using System.Text.Json.Serialization;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Serilog;
+using OpenTelemetry.Metrics;
+using BranchBooking.Api.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +42,30 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics =>
+    {
+        metrics.AddAspNetCoreInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter(ApiTelemetry.MeterName);
+
+        var exporter = builder.Configuration["OpenTelemetry:Metrics:Exporter"];
+        if (string.Equals(exporter, "otlp", StringComparison.OrdinalIgnoreCase))
+        {
+            metrics.AddOtlpExporter(options =>
+            {
+                var endpoint = builder.Configuration["OpenTelemetry:Metrics:OtlpEndpoint"];
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    options.Endpoint = new Uri(endpoint);
+                }
+            });
+        }
+        else if (string.Equals(exporter, "console", StringComparison.OrdinalIgnoreCase))
+        {
+            metrics.AddConsoleExporter();
+        }
+    });
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
 if (!builder.Environment.IsDevelopment() &&
     (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || jwtOptions.SigningKey.Contains("change-this", StringComparison.OrdinalIgnoreCase)))
@@ -97,9 +123,18 @@ builder.Services.AddApplication();
 
 var app = builder.Build();
 
+app.UseRouting();
+app.UseMiddleware<ApiTelemetryMiddleware>();
+
+app.Logger.LogInformation(
+    "BranchBooking API starting in {EnvironmentName} environment with metrics exporter {MetricsExporter}",
+    app.Environment.EnvironmentName,
+    app.Configuration["OpenTelemetry:Metrics:Exporter"] ?? "disabled");
+
 var bootstrapAdminOptions = app.Configuration.GetSection("BootstrapAdmin").Get<BootstrapAdminOptions>() ?? new BootstrapAdminOptions();
 if (bootstrapAdminOptions.Enabled)
 {
+    app.Logger.LogInformation("Bootstrap administrator seeding is enabled");
     using var scope = app.Services.CreateScope();
     var bootstrapAdminSeeder = scope.ServiceProvider.GetRequiredService<BootstrapAdminSeeder>();
     await bootstrapAdminSeeder.SeedAsync(bootstrapAdminOptions);

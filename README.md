@@ -83,38 +83,31 @@ The application uses a responsive single-page frontend backed by a JSON HTTP API
 
 The solution is organized into a layered backend and a feature-oriented frontend.
 
-```text
-┌──────────────────────────────┐
-│ BookingUI                    │
-│ React + TypeScript + Vite    │
-└──────────────┬───────────────┘
-			   │ JSON/HTTP + Bearer access token
-			   │ HttpOnly refresh cookie
-┌──────────────▼───────────────┐
-│ BranchBooking.Api            │
-│ Minimal API endpoints        │
-│ Auth, CORS, exception        │
-│ handling, OpenAPI, Serilog   │
-└──────────────┬───────────────┘
-			   │ application interfaces
-┌──────────────▼───────────────┐
-│ BranchBooking.Application    │
-│ Services, DTOs, requests,    │
-│ validation, authorization    │
-│ orchestration                │
-└──────────────┬───────────────┘
-			   │ repository interfaces
-┌──────────────▼───────────────┐
-│ BranchBooking.Infrastructure │
-│ Dapper repositories,         │
-│ PostgreSQL connection,       │
-│ password and JWT services    │
-└──────────────┬───────────────┘
-			   │ SQL functions
-┌──────────────▼───────────────┐
-│ PostgreSQL                   │
-│ Tables, indexes, functions   │
-└──────────────────────────────┘
+```mermaid
+flowchart TB
+    UI["BookingUI<br/>React + TypeScript + Vite"]
+    API["BranchBooking.Api<br/>Minimal API endpoints<br/>Auth, CORS, OpenAPI, exception handling"]
+    APP["BranchBooking.Application<br/>Services, DTOs, validation,<br/>authorization, orchestration"]
+    INFRA["BranchBooking.Infrastructure<br/>Dapper repositories, PostgreSQL connection,<br/>password and JWT services"]
+    DB[("PostgreSQL<br/>Tables, indexes, functions")]
+    OBS["Serilog + OpenTelemetry<br/>Structured logs and metrics"]
+
+    UI -->|"JSON/HTTP + bearer access token<br/>HttpOnly refresh cookie"| API
+    API -->|"Application interfaces"| APP
+    APP -->|"Repository interfaces"| INFRA
+    INFRA -->|"SQL functions"| DB
+    API -.-> OBS
+    APP -.-> OBS
+
+    classDef frontend fill:#dbeafe,stroke:#2563eb,color:#111827
+    classDef backend fill:#dcfce7,stroke:#16a34a,color:#111827
+    classDef data fill:#fef3c7,stroke:#d97706,color:#111827
+    classDef observability fill:#f3e8ff,stroke:#9333ea,color:#111827
+
+    class UI frontend
+    class API,APP,INFRA backend
+    class DB data
+    class OBS observability
 ```
 
 ### Backend project responsibilities
@@ -608,6 +601,12 @@ The API reads standard ASP.NET Core configuration. The main settings are:
 	"SigningKey": "<at-least-32-character-secret>",
 	"AccessTokenMinutes": 10,
 	"RefreshTokenDays": 30
+  },
+  "OpenTelemetry": {
+    "Metrics": {
+      "Exporter": "disabled",
+      "OtlpEndpoint": ""
+    }
   }
 }
 ```
@@ -624,6 +623,8 @@ Jwt__Audience
 Jwt__SigningKey
 Jwt__AccessTokenMinutes
 Jwt__RefreshTokenDays
+OpenTelemetry__Metrics__Exporter
+OpenTelemetry__Metrics__OtlpEndpoint
 ```
 
 The API requires a configured database connection string and a JWT signing key of at least 32 characters during startup.
@@ -786,6 +787,9 @@ Screens expose loading and failure states instead of silently rendering incomple
 - `GlobalExceptionHandler` maps application/domain failures into HTTP problem responses.
 - Domain validation uses dedicated exception types.
 - Serilog provides structured request logging and console output by default.
+- Authentication lifecycle, startup, request, and domain-exception events use structured log fields without recording passwords, access tokens, refresh tokens, or email addresses.
+- OpenTelemetry collects ASP.NET Core and .NET runtime metrics together with API request count, duration, and error metrics.
+- Metrics export is disabled by default and can be enabled with the `console` or `otlp` exporter through `OpenTelemetry:Metrics:Exporter`.
 - ASP.NET Core framework logs are reduced to Warning by default in the main configuration.
 - Frontend API failures are converted into user-facing errors by `apiClient`, with server problem details used when available.
 - Feature pages provide retry actions for recoverable loading failures.
