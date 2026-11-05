@@ -21,7 +21,7 @@ public static class AuthenticationEndpoints
             var result = await authenticationService.RegisterCustomerAsync(request, cancellationToken);
             loggerFactory.CreateLogger("AuthenticationEndpoints").LogInformation("Customer registration completed");
             return Results.Created("/api/auth/me", result);
-        });
+        }).RequireRateLimiting("AuthRegistration");
 
         group.MapPost("/login", async (LoginRequest request, IAuthenticationService authenticationService, ILoggerFactory loggerFactory, HttpResponse response, CancellationToken cancellationToken) =>
         {
@@ -29,7 +29,7 @@ public static class AuthenticationEndpoints
             SetRefreshCookie(response, authentication.RefreshToken);
             loggerFactory.CreateLogger("AuthenticationEndpoints").LogInformation("Customer or staff login completed");
             return Results.Ok(authentication.Result);
-        });
+        }).RequireRateLimiting("AuthLogin");
 
         group.MapPost("/refresh", async (IAuthenticationService authenticationService, ILoggerFactory loggerFactory, HttpRequest request, HttpResponse response, CancellationToken cancellationToken) =>
         {
@@ -38,7 +38,7 @@ public static class AuthenticationEndpoints
             SetRefreshCookie(response, authentication.RefreshToken);
             loggerFactory.CreateLogger("AuthenticationEndpoints").LogDebug("Refresh token rotation completed");
             return Results.Ok(authentication.Result);
-        });
+        }).RequireRateLimiting("AuthRefresh");
 
         group.MapPost("/logout", async (IAuthenticationService authenticationService, ILoggerFactory loggerFactory, HttpRequest request, HttpResponse response, CancellationToken cancellationToken) =>
         {

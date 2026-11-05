@@ -31,19 +31,19 @@ public sealed class AuthenticationRepository(DbConnectionFactory connectionFacto
             cancellationToken: cancellationToken));
     }
 
-    public async Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
+        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
             "SELECT public.update_staff_role(@UserId, @RoleCode)",
             new { UserId = userId, RoleCode = roleCode },
             cancellationToken: cancellationToken));
     }
 
-    public async Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
     {
         await using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
+        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
             "SELECT public.update_staff_status(@UserId, @Status)",
             new { UserId = userId, Status = (short)status }, cancellationToken: cancellationToken));
     }

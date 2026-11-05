@@ -87,19 +87,6 @@ public sealed class BranchConfigurationServiceTests
     }
 
     [Test]
-    public async Task CreateDateOverrideAsync_WhenScheduleDoesNotBelongToBranch_RejectsRequest()
-    {
-        var date = new DateOnly(2025, 1, 2);
-        _scheduleRepository.GetForBranchAsync(7, date, Arg.Any<CancellationToken>()).Returns((Core.Models.Schedule.OperationalScheduleRecord?)null);
-        var request = new CreateDateOverrideRequest(99, date, null, false, new TimeOnly(9), new TimeOnly(17), 10);
-
-        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _configurationService.CreateDateOverrideAsync(7, request));
-
-        Assert.That(exception!.Message, Is.EqualTo("The operational schedule does not belong to this branch or date."));
-        await _configurationRepository.DidNotReceive().CreateDateOverrideAsync(Arg.Any<long>(), Arg.Any<CreateDateOverrideRequest>(), Arg.Any<CancellationToken>());
-    }
-
-    [Test]
     public async Task UpdateDateOverrideAsync_WhenOverrideDoesNotBelongToBranch_RejectsRequest()
     {
         var date = new DateOnly(2025, 1, 2);

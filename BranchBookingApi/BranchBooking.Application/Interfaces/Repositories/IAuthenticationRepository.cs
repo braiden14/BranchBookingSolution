@@ -10,9 +10,9 @@ public interface IAuthenticationRepository
     Task<PagedStaffDto> GetStaffAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<long> CountStaffAsync(CancellationToken cancellationToken = default);
 
-    Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default);
+    Task<bool> UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default);
 
-    Task UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default);
+    Task<bool> UpdateStaffRoleAsync(long userId, string roleCode, CancellationToken cancellationToken = default);
 
     Task RevokeUserSessionsAsync(long userId, string reason, CancellationToken cancellationToken = default);
 

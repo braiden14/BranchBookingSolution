@@ -44,7 +44,10 @@ public sealed class AuthenticationService(
             throw new DomainValidationException("Only staff accounts can be assigned staff roles.");
         }
 
-        await authenticationRepository.UpdateStaffRoleAsync(userId, normalizedRoleCode, cancellationToken);
+        if (!await authenticationRepository.UpdateStaffRoleAsync(userId, normalizedRoleCode, cancellationToken))
+        {
+            throw new DomainValidationException("The staff member could not be updated.");
+        }
     }
 
     public async Task UpdateStaffStatusAsync(long userId, UserStatus status, CancellationToken cancellationToken = default)
@@ -61,7 +64,10 @@ public sealed class AuthenticationService(
             throw new DomainValidationException("Only Admin, Staff, and BranchManager accounts can be managed here.");
         }
 
-        await authenticationRepository.UpdateStaffStatusAsync(userId, status, cancellationToken);
+        if (!await authenticationRepository.UpdateStaffStatusAsync(userId, status, cancellationToken))
+        {
+            throw new DomainValidationException("The staff member could not be updated.");
+        }
         if (status == UserStatus.Disabled)
         {
             await authenticationRepository.RevokeUserSessionsAsync(userId, "Staff account deactivated", cancellationToken);

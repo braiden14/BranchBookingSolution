@@ -44,6 +44,7 @@ public sealed class AuthenticationServiceTests
     public async Task UpdateStaffRoleAsync_NormalizesBranchManagerAndUpdatesRepository()
     {
         _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
+        _repository.UpdateStaffRoleAsync(5, "BranchManager", Arg.Any<CancellationToken>()).Returns(true);
 
         await _service.UpdateStaffRoleAsync(5, "Branch Manager");
 
@@ -77,6 +78,17 @@ public sealed class AuthenticationServiceTests
     }
 
     [Test]
+    public void UpdateStaffRoleAsync_WhenRepositoryReportsNoUpdate_RejectsRequest()
+    {
+        _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
+        _repository.UpdateStaffRoleAsync(5, "Admin", Arg.Any<CancellationToken>()).Returns(false);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _service.UpdateStaffRoleAsync(5, "Admin"));
+
+        Assert.That(exception!.Message, Is.EqualTo("The staff member could not be updated."));
+    }
+
+    [Test]
     public async Task GetStaffAsync_ClampsPagingAndReturnsRepositoryResult()
     {
         var expected = new PagedStaffDto([], 1, 100, 0, 0);
@@ -92,6 +104,7 @@ public sealed class AuthenticationServiceTests
     public async Task UpdateStaffStatusAsync_WhenDeactivatingStaff_UpdatesStatusAndRevokesSessions()
     {
         _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
+        _repository.UpdateStaffStatusAsync(5, UserStatus.Disabled, Arg.Any<CancellationToken>()).Returns(true);
 
         await _service.UpdateStaffStatusAsync(5, UserStatus.Disabled);
 
@@ -106,6 +119,18 @@ public sealed class AuthenticationServiceTests
 
         Assert.ThrowsAsync<DomainValidationException>(async () => await _service.UpdateStaffStatusAsync(5, UserStatus.Disabled));
         _repository.DidNotReceive().UpdateStaffStatusAsync(Arg.Any<long>(), Arg.Any<UserStatus>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void UpdateStaffStatusAsync_WhenRepositoryReportsNoUpdate_RejectsRequest()
+    {
+        _repository.GetUserByIdAsync(5, Arg.Any<CancellationToken>()).Returns(CreateUser() with { Roles = ["Staff"] });
+        _repository.UpdateStaffStatusAsync(5, UserStatus.Disabled, Arg.Any<CancellationToken>()).Returns(false);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _service.UpdateStaffStatusAsync(5, UserStatus.Disabled));
+
+        Assert.That(exception!.Message, Is.EqualTo("The staff member could not be updated."));
+        _repository.DidNotReceive().RevokeUserSessionsAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
