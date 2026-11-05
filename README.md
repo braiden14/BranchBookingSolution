@@ -263,7 +263,7 @@ BranchBookingSolution/
 │   ├── NotificationService.Tests/         # Notification unit tests
 │   └── NotificationService.slnx
 └── DatabaseScripts/
-    └── V1_*.sql through V17_*.sql      # PostgreSQL schema, functions, data, and corrective migrations
+    └── V1_*.sql through V18_*.sql      # PostgreSQL schema, functions, data, and corrective migrations
 ```
 
 ## Backend API
@@ -414,6 +414,7 @@ Apply the scripts in version order to a new database:
 | `V15_Api_Correctness.sql` | Corrective function definitions for closed-day schedules and safe offered-service deletion. |
 | `V16_Remove_Unused_Objects.sql` | Removes obsolete schedule functions and authentication tables from existing databases. |
 | `V17_Appointment_Notification_Details.sql` | Adds a targeted single-appointment lookup for notification publishing. |
+| `V18_Update_Staff_Role.sql` | Adds the staff role update function used by the API. |
 
 The repository currently uses versioned SQL scripts rather than an application-managed migration runner. Apply new or changed scripts explicitly in each environment. The V17 function should be applied before creating or rescheduling appointments through the API.
 

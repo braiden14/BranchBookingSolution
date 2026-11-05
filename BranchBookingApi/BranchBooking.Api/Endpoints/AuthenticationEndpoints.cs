@@ -82,8 +82,15 @@ public static class AuthenticationEndpoints
             return Results.Ok(new { invitationToken });
         }).RequireAuthorization("AdminOnly");
 
-        group.MapPatch("/staff/{userId:long}/role", async (long userId, UpdateStaffRoleRequest request, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
+        group.MapPatch("/staff/{userId:long}/role", async (long userId, UpdateStaffRoleRequest request, ClaimsPrincipal principal, IAuthenticationService authenticationService, CancellationToken cancellationToken) =>
         {
+            var subject = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
+            var requestedRole = request.RoleCode?.Replace(" ", string.Empty, StringComparison.Ordinal);
+            if (long.TryParse(subject, out var requestingUserId) && requestingUserId == userId && !string.Equals(requestedRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest("You cannot demote yourself from Admin.");
+            }
+
             await authenticationService.UpdateStaffRoleAsync(userId, request.RoleCode, cancellationToken);
             return Results.NoContent();
         }).RequireAuthorization("AdminOnly");

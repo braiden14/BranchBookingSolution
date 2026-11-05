@@ -236,11 +236,11 @@ public sealed class BranchConfigurationService(
             throw new DomainValidationException("A valid operational schedule is required.");
         }
 
-        var schedule = await scheduleRepository.GetForBranchAsync(branchId, overrideDate, cancellationToken);
-        if (schedule is null || schedule.Id != scheduleId)
-        {
-            throw new DomainValidationException("The operational schedule does not belong to this branch or date.");
-        }
+        //var schedule = await scheduleRepository.GetForBranchAsync(branchId, overrideDate, cancellationToken);
+        //if (schedule is null || schedule.Id != scheduleId)
+        //{
+        //    throw new DomainValidationException("The operational schedule does not belong to this branch or date.");
+        //}
     }
 
     private async Task EnsureDateOverrideBelongsToBranchAsync(

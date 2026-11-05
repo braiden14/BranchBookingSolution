@@ -1,8 +1,6 @@
 using BranchBooking.Application.Interfaces.Services;
-using BranchBooking.Application.DTOs;
 using BranchBooking.Application.Models.Request;
 using BranchBooking.Application.Models.Notifications;
-using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BranchBooking.Api.Endpoints;
