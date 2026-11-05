@@ -8,6 +8,7 @@ public sealed class ApiTelemetryMiddleware(RequestDelegate next, ILogger<ApiTele
     public async Task InvokeAsync(HttpContext context)
     {
         var stopwatch = Stopwatch.StartNew();
+        context.Response.Headers.TryAdd("X-Trace-Id", context.TraceIdentifier);
 
         try
         {
